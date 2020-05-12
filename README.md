@@ -19,4 +19,13 @@ ${ROOT}
 ├──README.md
 ```
 
+## Requirements
+You can refer [the tutorial](https://github.com/maudzung/virtual_environment_python3) to install a virtual environment
+
+## Download the dataset
+```shell script
+cd src/prepare_dataset
+python download_dataset.py
+```
+
 The source code will be updated soon... Staring and watching us...
