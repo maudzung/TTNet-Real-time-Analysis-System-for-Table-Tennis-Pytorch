@@ -17,8 +17,8 @@ def get_frame_indexes(events_annos_path):
     main_frames = sorted(events_annos.keys())
     for main_f_idx in main_frames:
         main_f_idx = int(main_f_idx)
-        # take 25 videos frames with the event right in the middle frame
-        for idx in range(main_f_idx - 12, main_f_idx + 13):
+        # take 9 or 25 videos frames with the event right in the middle frame
+        for idx in range(main_f_idx - num_frames_from_event, main_f_idx + num_frames_from_event + 1):
             selected_indexes.append(idx)
     selected_indexes = set(selected_indexes)
     return selected_indexes
@@ -59,6 +59,8 @@ def extract_images_from_videos(video_path, events_annos_path, out_images_dir):
 
 if __name__ == '__main__':
     dataset_dir = '../../dataset'
+    num_frames_sequence = 9  # the paper mentioned 25, but used 9 frames only
+    num_frames_from_event = int((num_frames_sequence - 1) / 2)
     for dataset_type in ['training', 'test']:
         video_dir = os.path.join(dataset_dir, dataset_type, 'videos')
         annos_dir = os.path.join(dataset_dir, dataset_type, 'annotations')
