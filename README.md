@@ -13,19 +13,55 @@ ${ROOT}
         ├──videos/
     ├──training
         ├──annotations/
+            ├──game_1/
+                ├──segmentation_masks/
+                ├──ball_markup.json
+                ├──events_markup.json
+            ├──game_2/
+            ...
         ├──images/
+            ├──game_1/
+                ├──img_000001.jpg
+                ├──img_000002.jpg
+                ...
+            ├──game_2/
+                ├──img_000001.jpg
+                ├──img_000002.jpg
+                ...
+            ...
         ├──videos/
+            ├──game_1.mp4
+            ├──game_2.mp4
+            ...
 ├──src/
+    ├──prepare_dataset/
+        ├──download_dataset.py
+        ├──extract_images.py
+        ├──unzip.py
 ├──README.md
 ```
 
 ## Requirements
 You can refer [the tutorial](https://github.com/maudzung/virtual_environment_python3) to install a virtual environment
 
-## Download the dataset
+## Prepare the dataset
+### Download the dataset and unzip annotations
 ```shell script
 cd src/prepare_dataset
 python download_dataset.py
+python unzip.py
+```
+
+### Extract images from videos
+If you want to extract all images from videos, let's execute:
+```shell script
+python extract_all_images.py
+```
+
+As the authors mentioned in the original paper, images are extracted based on frames that has events. 
+To extract selected frames, let's execute:
+```shell script
+python extract_selected_images.py
 ```
 
 The source code will be updated soon... Staring and watching us...
