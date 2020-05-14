@@ -41,18 +41,11 @@ def extract_images_from_videos(video_path, out_images_dir):
 
 if __name__ == '__main__':
     dataset_dir = '../../dataset'
-    train_video_dir = os.path.join(dataset_dir, 'training', 'videos')
-    train_images_dir = os.path.join(dataset_dir, 'training', 'images')
+    for dataset_type in ['training', 'test']:
+        video_dir = os.path.join(dataset_dir, dataset_type, 'videos')
+        out_images_dir = os.path.join(dataset_dir, dataset_type, 'images')
 
-    train_video_paths = glob(os.path.join(train_video_dir, '*.mp4'))
+        video_paths = glob(os.path.join(video_dir, '*.mp4'))
 
-    for video_idx, video_path in enumerate(train_video_paths):
-        extract_images_from_videos(video_path, train_images_dir)
-
-    test_video_dir = os.path.join(dataset_dir, 'test', 'videos')
-    test_images_dir = os.path.join(dataset_dir, 'test', 'images')
-
-    test_video_paths = glob(os.path.join(test_video_dir, '*.mp4'))
-
-    for video_idx, video_path in enumerate(test_video_paths):
-        extract_images_from_videos(video_path, test_images_dir)
+        for video_idx, video_path in enumerate(video_paths):
+            extract_images_from_videos(video_path, out_images_dir)
