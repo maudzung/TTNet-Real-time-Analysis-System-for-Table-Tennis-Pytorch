@@ -73,7 +73,7 @@ def parse_configs():
     ####################################################################
     configs.working_dir = '../../'
     configs.dataset_dir = os.path.join(configs.working_dir, 'dataset')
-    configs.train_games = ['game_1', 'game_2', 'game_3', 'game_4', 'game_5']
+    configs.train_game_list = ['game_1', 'game_2', 'game_3', 'game_4', 'game_5']
     configs.events_dict = {
         'bounce': 0,
         'net': 1,
