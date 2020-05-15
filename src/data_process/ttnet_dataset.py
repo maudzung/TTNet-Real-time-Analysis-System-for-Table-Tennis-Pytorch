@@ -49,15 +49,15 @@ if __name__ == '__main__':
     import cv2
     import matplotlib.pyplot as plt
     from config.config import parse_configs
-    from data_process.ttnet_data_utils import get_events_infor
+    from data_process.ttnet_data_utils import get_events_infor, train_val_data_separation
     from data_process.transformation import Compose, Random_Crop, Resize, Random_HFlip, Random_Rotate
 
     configs = parse_configs()
     game_list = ['game_1']
     dataset_type = 'training'
-    events_infor = get_events_infor(game_list, configs, dataset_type, num_frames_sequence=configs.num_frames_sequence)
-    print(len(events_infor))
-    ttnet_dataset = TTNet_Dataset(events_infor, configs.events_dict, transformations=None)
+    train_events_infor, val_events_infor = train_val_data_separation(configs)
+    print(len(train_events_infor))
+    ttnet_dataset = TTNet_Dataset(train_events_infor, configs.events_dict, transformations=None)
 
     print(len(ttnet_dataset))
     example_index = 150
