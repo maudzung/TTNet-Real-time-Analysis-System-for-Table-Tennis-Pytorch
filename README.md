@@ -3,6 +3,14 @@ The implementation for the paper "TTNet: Real-time temporal and spatial video an
 
 ---
 
+## Features
+- [x] Ball detection global stage
+- [x] Ball detection local stage (refinement)
+- [x] Events Spotting detection (Bounce and Net hit)
+- [x] Semantic Segmentation (Human, table, and scoreboard)
+- [x] Multi-Task learning
+- [ ] Evaluate
+
 ## Source code structure
 ```shell script
 ${ROOT}
