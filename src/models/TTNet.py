@@ -154,23 +154,54 @@ class TTNet(nn.Module):
         self.events_spotting = EventsSpotting(dropout_p=dropout_p)
         self.segmentation = Segmentation()
 
-    def forward(self, x):
-        out_ball_global, global_features, out_block2, out_block3, out_block4, out_block5 = self.ball_global_stage(x)
+    def forward(self, original_batch_input, resize_batch_input):
+        pred_ball_global, global_features, out_block2, out_block3, out_block4, out_block5 = self.ball_global_stage(
+            resize_batch_input)
 
-        input_ball_local = x
-        out_ball_local, local_features, _, _, _, _ = self.ball_local_stage(input_ball_local)
+        input_ball_local = self.crop_original_batch(original_batch_input, pred_ball_global)
 
-        out_segmentation = self.segmentation(out_block2, out_block3, out_block4, out_block5)
-        out_eventspotting = self.events_spotting(global_features, local_features)
+        pred_ball_local, local_features, _, _, _, _ = self.ball_local_stage(input_ball_local)
 
-        return out_ball_global, out_ball_local, out_segmentation, out_eventspotting
+        pred_segmentation = self.segmentation(out_block2, out_block3, out_block4, out_block5)
+        pred_eventspotting = self.events_spotting(global_features, local_features)
+
+        return pred_ball_global, pred_ball_local, pred_segmentation, pred_eventspotting
+
+    def crop_original_batch(self, original_batch_input, pred_ball_global):
+        # Process input for local stage based on output of the global one
+        b_size, c, h_resize, w_resize = resize_batch_input.size()
+        _, _, h_original, w_original = original_batch_input.size()
+        ball_pos_x = torch.argmax(pred_ball_global[:, :w_resize], dim=-1)  # Upper part
+        ball_pos_y = torch.argmax(pred_ball_global[:, w_resize:], dim=-1)  # Lower part
+
+        # Crop the original images
+        input_ball_local = torch.zeros_like(resize_batch_input)  # same shape with resize_batch_input
+        for i in range(b_size):
+            x_min, x_max, y_min, y_max = self.get_crop_params(ball_pos_x[i], ball_pos_y[i], w_resize, h_resize,
+                                                              w_original,
+                                                              h_original)
+            input_ball_local[i, :, :, :] = original_batch_input[i, :, y_min:y_max, x_min: x_max]
+
+        return input_ball_local
+
+    @staticmethod
+    def get_crop_params(x_center, y_center, w_resize, h_resize, w_original, h_original):
+        x_min = max(0, x_center - int(w_resize / 2))
+        y_min = max(0, y_center - int(h_resize / 2))
+
+        x_max = min(w_original, x_min + w_resize)
+        y_max = min(h_original, y_min + h_resize)
+
+        return x_min, x_max, y_min, y_max
 
 
 if __name__ == '__main__':
     from torchsummary import summary
 
     ttnet = TTNet(dropout_p=0.5).cuda()
-    x = torch.rand((10, 27, 128, 320)).cuda()
-    out_ball_global, out_ball_local, out_segmentation, out_eventspotting = ttnet(x)
-    print('out_ball_global: {}, out_ball_local: {}'.format(out_ball_global.size(), out_ball_local.size()))
-    print('out_segmentation: {}, out_eventspotting: {}'.format(out_segmentation.size(), out_eventspotting.size()))
+    resize_batch_input = torch.rand((10, 27, 128, 320)).cuda()
+    original_batch_input = torch.rand((10, 27, 1080, 1920)).cuda()
+    pred_ball_global, pred_ball_local, pred_segmentation, pred_eventspotting = ttnet(original_batch_input,
+                                                                                     resize_batch_input)
+    print('pred_ball_global: {}, pred_ball_local: {}'.format(pred_ball_global.size(), pred_ball_local.size()))
+    print('pred_segmentation: {}, pred_eventspotting: {}'.format(pred_segmentation.size(), pred_eventspotting.size()))
