@@ -17,27 +17,40 @@ ${ROOT}
                 ├──segmentation_masks/
                 ├──ball_markup.json
                 ├──events_markup.json
-            ├──game_2/
-            ...
         ├──images/
             ├──game_1/
                 ├──img_000001.jpg
                 ├──img_000002.jpg
                 ...
-            ├──game_2/
-                ├──img_000001.jpg
-                ├──img_000002.jpg
-                ...
-            ...
         ├──videos/
             ├──game_1.mp4
             ├──game_2.mp4
             ...
 ├──src/
+    ├──config/
+        ├──config.py
+    ├──data_process/
+        ├──transformation.py
+        ├──ttnet_data_utils.py
+        ├──ttnet_dataloader.py
+        ├──ttnet_dataset.py
+    ├──losses/
+        ├──losses.py
+    ├──models/
+        ├──TTNet.py
     ├──prepare_dataset/
         ├──download_dataset.py
         ├──extract_images.py
         ├──unzip.py
+    ├──training/
+        ├──main.py
+        ├──train_utils.py
+    ├──utils/
+        ├──logger.py
+        ├──misc.py
+
+
+    
 ├──README.md
 ```
 
