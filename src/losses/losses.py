@@ -26,7 +26,7 @@ class Ball_Detection_Loss(nn.Module):
 class Events_Spotting_Loss(nn.Module):
     def __init__(self, weights=(1, 3), num_events=2, reduction='mean'):
         super(Events_Spotting_Loss, self).__init__()
-        self.weights = weights
+        self.weights = torch.tensor(weights).view(1, 2).cuda()
         self.num_events = num_events
         self.reduction = reduction
 
@@ -62,7 +62,8 @@ class Segmentation_Loss(nn.Module):
         self.dice_criterion = DICE_Smotth_Loss(thresh_seg=thresh_seg, epsilon=1e-9, reduction=reduction)
 
     def forward(self, pred_seg, target_seg):
-        loss_bce = self.bce_criterion(pred_seg, target_seg)
+        target_seg = target_seg.float()
+        loss_bce = self.bce_criterion(pred_seg, target_seg.float())
         loss_dice = self.dice_criterion(pred_seg, target_seg)
 
         loss_seg = loss_bce + loss_dice
@@ -70,9 +71,11 @@ class Segmentation_Loss(nn.Module):
         return loss_seg
 
 
-class Compute_Loss(nn.Module):
-    def __init__(self, num_events=2, weights_events=(1, 3), thresh_seg=0.5, input_size=(320, 128), reduction='mean'):
-        super(Compute_Loss, self).__init__()
+class Imbalance_Loss_Model(nn.Module):
+    def __init__(self, model, num_events=2, weights_events=(1, 3), thresh_seg=0.5, input_size=(320, 128),
+                 reduction='mean'):
+        super(Imbalance_Loss_Model, self).__init__()
+        self.model = model
         self.num_events = num_events
         self.w = input_size[0]
         self.h = input_size[1]
@@ -81,13 +84,17 @@ class Compute_Loss(nn.Module):
                                                          reduction=reduction)
         self.seg_loss_criterion = Segmentation_Loss(thresh_seg=thresh_seg, reduction='mean')
 
-    def forward(self, pred_ball_position, target_ball_position, pred_events, target_events, pred_seg, target_seg):
-        ball_loss = self.ball_loss_criterion(pred_ball_position, target_ball_position)
+    def forward(self, original_batch_input, resize_batch_input, target_ball_position, target_events, target_seg):
+        pred_ball_position_global, pred_ball_position_local, pred_events, pred_seg = self.model(original_batch_input,
+                                                                                                resize_batch_input)
+        global_ball_loss = self.ball_loss_criterion(pred_ball_position_global, target_ball_position)
+        local_ball_loss = self.ball_loss_criterion(pred_ball_position_local, target_ball_position)
         event_loss = self.event_loss_criterion(pred_events, target_events)
         seg_loss = self.seg_loss_criterion(pred_seg, target_seg)
-        total_loss = ball_loss + event_loss + seg_loss
 
-        return total_loss
+        total_loss = global_ball_loss + local_ball_loss + event_loss + seg_loss
+
+        return pred_ball_position_global, pred_ball_position_local, pred_events, pred_seg, total_loss, None
 
 
 class Multi_Task_Learning_Model(nn.Module):
@@ -96,7 +103,7 @@ class Multi_Task_Learning_Model(nn.Module):
     url: https://arxiv.org/pdf/1705.07115.pdf
     """
 
-    def __init__(self, model, num_tasks, num_events=2, weights_events=(1, 3), thresh_seg=0.5, input_size=(320, 128),
+    def __init__(self, model, num_tasks=4, num_events=2, weights_events=(1, 3), thresh_seg=0.5, input_size=(320, 128),
                  reduction='mean'):
         super(Multi_Task_Learning_Model, self).__init__()
         self.model = model
@@ -116,8 +123,8 @@ class Multi_Task_Learning_Model(nn.Module):
         local_ball_loss = self.ball_loss_criterion(pred_ball_position_local, target_ball_position)
         event_loss = self.event_loss_criterion(pred_events, target_events)
         seg_loss = self.seg_loss_criterion(pred_seg, target_seg)
-        loss = 0.
+        total_loss = 0.
         for subloss_idx, subloss in enumerate([global_ball_loss, local_ball_loss, event_loss, seg_loss]):
-            loss += subloss / (self.vars[subloss_idx] ** 2) + torch.log(self.vars[subloss_idx])
+            total_loss += subloss / (self.vars[subloss_idx] ** 2) + torch.log(self.vars[subloss_idx])
 
-        return loss, self.vars.data.tolist()
+        return pred_ball_position_global, pred_ball_position_local, pred_events, pred_seg, total_loss, self.vars.data.tolist()
