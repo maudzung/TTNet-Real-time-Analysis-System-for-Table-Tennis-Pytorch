@@ -63,6 +63,7 @@ class BallDetection(nn.Module):
         self.fc2 = nn.Linear(in_features=1792, out_features=896)
         self.fc3 = nn.Linear(in_features=896, out_features=448)
         self.dropout1d = nn.Dropout(p=dropout_p)
+        self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
         x = self.relu(self.batchnorm(self.conv1(x)))
@@ -79,7 +80,7 @@ class BallDetection(nn.Module):
 
         x = self.dropout1d(self.relu(self.fc1(x)))
         x = self.dropout1d(self.relu(self.fc2(x)))
-        out = self.fc3(x)
+        out = self.sigmoid(self.fc3(x))
 
         return out, features, out_block2, out_block3, out_block4, out_block5
 
@@ -94,6 +95,7 @@ class EventsSpotting(nn.Module):
         self.convblock = ConvBlock_without_Pooling(in_channels=64, out_channels=64)
         self.fc1 = nn.Linear(in_features=640, out_features=512)
         self.fc2 = nn.Linear(in_features=512, out_features=2)
+        self.sigmoid = nn.Sigmoid()
 
     def forward(self, global_features, local_features):
         input_eventspotting = torch.cat((global_features, local_features), dim=1)
@@ -106,7 +108,7 @@ class EventsSpotting(nn.Module):
 
         x = x.view(x.size(0), -1)
         x = self.relu(self.fc1(x))
-        out = self.fc2(x)
+        out = self.sigmoid(self.fc2(x))
 
         return out
 
@@ -123,6 +125,7 @@ class Segmentation(nn.Module):
         self.relu = nn.ReLU()
         self.conv1 = nn.Conv2d(32, 32, kernel_size=3, stride=1, padding=0)
         self.conv2 = nn.Conv2d(32, 3, kernel_size=2, stride=1, padding=1)
+        self.sigmoid = nn.Sigmoid()
 
     def forward(self, out_block2, out_block3, out_block4, out_block5):
         x = self.deconvblock5(out_block5)
@@ -138,7 +141,7 @@ class Segmentation(nn.Module):
 
         x = self.relu(self.conv1(x))
 
-        out = self.conv2(x)
+        out = self.sigmoid(self.conv2(x))
 
         return out
 
