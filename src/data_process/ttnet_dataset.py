@@ -23,8 +23,8 @@ class TTNet_Dataset(Dataset):
 
     def __getitem__(self, index):
         img_path_list, ball_position_xy, event_name, seg_path = self.events_infor[index]
-        event_class = self.events_dict[event_name]
-        print('event_name: {}'.format(event_name))
+        # event_class = self.events_dict[event_name]
+        # print('event_name: {}'.format(event_name))
         # Load segmentation
         seg_img = load_raw_img(seg_path)
 
@@ -46,12 +46,13 @@ class TTNet_Dataset(Dataset):
 
         # Transpose (H, W, C) to (C, H, W) --> fit input of TTNet model
         origin_imgs = origin_imgs.transpose(2, 0, 1)
+        target_seg = seg_img.transpose(2, 0, 1)
 
         # Create target for events spotting and ball position
         target_ball_possition = create_target_ball_possition(ball_position_xy, self.sigma, self.w, self.h)
-        target_events_spotting = create_target_events_spotting(event_name, configs.events_dict)
+        target_events_spotting = create_target_events_spotting(event_name, self.events_dict)
 
-        return origin_imgs, aug_imgs, target_ball_possition, target_events_spotting, seg_img, ball_position_xy, event_name
+        return origin_imgs, aug_imgs, target_ball_possition, target_events_spotting, target_seg, ball_position_xy, event_name
 
 
 if __name__ == '__main__':
