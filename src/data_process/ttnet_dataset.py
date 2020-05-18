@@ -6,7 +6,7 @@ from torch.utils.data import Dataset
 
 sys.path.append('../')
 
-from data_process.ttnet_data_utils import load_raw_img
+from data_process.ttnet_data_utils import load_raw_img, create_target_ball_possition, create_target_events_spotting
 
 
 class TTNet_Dataset(Dataset):
@@ -40,9 +40,10 @@ class TTNet_Dataset(Dataset):
         # Transpose (H, W, C) to (C, H, W) --> fit input of TTNet model
         imgs = imgs.transpose(2, 0, 1)
 
-        # return imgs, event_class, ball_position_xy, seg_img
+        target_ball_possition = create_target_ball_possition(ball_position_xy, sigma=1., w=320., h=128.)
+        target_events_spotting = create_target_events_spotting(event_name, configs.events_dict)
 
-        return imgs, event_name, ball_position_xy, seg_img
+        return imgs, target_ball_possition, target_events_spotting, seg_img
 
 
 if __name__ == '__main__':
