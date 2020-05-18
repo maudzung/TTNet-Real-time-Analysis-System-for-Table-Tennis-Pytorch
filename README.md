@@ -48,9 +48,6 @@ ${ROOT}
     ├──utils/
         ├──logger.py
         ├──misc.py
-
-
-    
 ├──README.md
 ```
 
