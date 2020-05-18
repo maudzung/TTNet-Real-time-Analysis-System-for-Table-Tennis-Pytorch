@@ -1,1 +1,8 @@
 wget
+torch
+easydict
+opencv-python
+numpy
+torchsummary
+tensorboard
+scikit-learn
