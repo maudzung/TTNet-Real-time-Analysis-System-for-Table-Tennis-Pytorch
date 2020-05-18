@@ -79,8 +79,14 @@ def parse_configs():
         'net': 1,
         'empty_event': 2
     }
+    configs.events_weights_loss_dict = {
+        'bounce': 1.,
+        'net': 3.,
+    }
 
-    configs.num_events = len(configs.events_dict)
+    configs.events_weights_loss = [configs.events_weights_loss_dict['bounce'], configs.events_weights_loss_dict['net']]
+
+    configs.num_events = 2  # Just "bounce" and "net hits"
     configs.num_frames_sequence = 9
 
     ####################################################################
