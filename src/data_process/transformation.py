@@ -22,10 +22,16 @@ class Normalize():
         self.mean = np.array(mean).reshape(1, 1, 3)
         self.std = np.array(std).reshape(1, 1, 3)
 
-    def __call__(self, img):
-        img = ((img / 255.) - self.mean) / self.std
+    def __call__(self, imgs, ball_position_xy, seg_img):
+        if random.random() < self.p:
+            h, w, c = imgs.shape
+            assert ((h == 128.) and (w == 320.) and (c == 27)), "The image need to be resized first"
+            num_imgs = int(c / 3)
+            for i in range(num_imgs):
+                img = imgs[:, :, (3 * i): (3 * (i + 1))]
+                imgs[:, :, (3 * i): (3 * (i + 1))] = ((img / 255.) - self.mean) / self.std
 
-        return img
+        return imgs, ball_position_xy, seg_img
 
 
 class Denormalize():
