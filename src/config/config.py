@@ -19,7 +19,7 @@ def parse_configs():
     ####################################################################
     parser.add_argument('--model_backbone', type=str, default='ttnet')
     parser.add_argument('--model_dropout_p', type=float, default=0.5)
-
+    parser.add_argument('--multitask_learning', type=bool, default=True)
     ####################################################################
     ##############     Losses configs            ###################
     ####################################################################
@@ -30,17 +30,17 @@ def parse_configs():
     ####################################################################
     parser.add_argument('--num_filepaths', type=int, default=None, help='Test with small dataset')
     parser.add_argument('--num_workers', type=int, default=8)
-    parser.add_argument('--batch_size', type=int, default=32)
+    parser.add_argument('--batch_size', type=int, default=4)
     parser.add_argument('--data_sampler', type=bool, default=False)
 
-    parser.add_argument('--print_freq', type=int, default=200)
+    parser.add_argument('--print_freq', type=int, default=10)
     parser.add_argument('--verbose', type=bool, default=True)
 
     ####################################################################
     ##############     Training strategy            ###################
     ####################################################################
 
-    parser.add_argument('--train_num_epochs', type=int, default=200)
+    parser.add_argument('--train_num_epochs', type=int, default=20)
     parser.add_argument('--train_lr', type=float, default=1e-4)
     parser.add_argument('--train_minimum_lr', type=float, default=1e-7)
     parser.add_argument('--train_momentum', type=float, default=0.9)
