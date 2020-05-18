@@ -3,6 +3,8 @@ import json
 
 import cv2
 from sklearn.model_selection import train_test_split
+import torch
+import numpy as np
 
 
 def load_raw_img(img_path):
@@ -13,6 +15,32 @@ def load_raw_img(img_path):
     """
     img = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2RGB)  # BGR --> RGB
     return img
+
+
+def gaussian_1d(pos, muy, sigma):
+    target = (np.exp(- (((pos - muy) / sigma) ** 2) / 2)) / (sigma * np.sqrt(2 * np.pi))
+    return target
+
+
+def create_target_ball_possition(ball_position_xy, sigma=1., w=320., h=128.):
+    target_ball_position = np.zeros((int(w + h),))
+    # For x
+    x_pos = np.arange(0, w)
+    target_ball_position[:w] = gaussian_1d(x_pos, ball_position_xy[0], sigma=sigma)
+    # For y
+    y_pos = np.arange(0, h)
+    target_ball_position[w:] = gaussian_1d(y_pos, ball_position_xy[1], sigma=sigma)
+
+    return target_ball_position
+
+
+def create_target_events_spotting(event_name, events_dict):
+    event_class = events_dict[event_name]
+    target_event = torch.zeros((2,))
+    if event_class < 2:
+        target_event[event_class] = 1.
+
+    return target_event
 
 
 def get_events_infor(game_list, configs, dataset_type):
@@ -62,14 +90,16 @@ def get_events_infor(game_list, configs, dataset_type):
             events_infor.append([img_path_list, ball_position_xy, event_name, seg_path])
     return events_infor, events_labels
 
+
 def train_val_data_separation(configs):
     dataset_type = 'training'
     events_infor, events_labels = get_events_infor(configs.train_game_list, configs, dataset_type)
     train_events_infor, val_events_infor, train_events_labels, val_events_labels = train_test_split(events_infor,
-                                                                                  events_labels, shuffle=True,
-                                                                                  test_size=0.2,
-                                                                                  random_state=configs.seed,
-                                                                                  stratify=events_labels)
+                                                                                                    events_labels,
+                                                                                                    shuffle=True,
+                                                                                                    test_size=0.2,
+                                                                                                    random_state=configs.seed,
+                                                                                                    stratify=events_labels)
     return train_events_infor, val_events_infor
 
 
@@ -81,3 +111,6 @@ if __name__ == '__main__':
     dataset_type = 'training'
     get_events_infor(game_list, configs, dataset_type)
     train_events_infor, val_events_infor = train_val_data_separation(configs)
+    event_name = 'net'
+    target_event = create_target_events_spotting(event_name, configs.events_dict)
+    print(target_event)
