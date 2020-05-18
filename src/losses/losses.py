@@ -71,11 +71,12 @@ class Segmentation_Loss(nn.Module):
 
 
 class Compute_Loss(nn.Module):
-    def __init__(self, num_events=2, thresh_seg=0.5, reduction='mean'):
+    def __init__(self, num_events=2, weights_events=(1, 3), thresh_seg=0.5, reduction='mean'):
         super(Compute_Loss, self).__init__()
         self.num_events = num_events
         self.ball_loss_criterion = Ball_Detection_Loss(w=320., h=128., reduction=reduction)
-        self.event_loss_criterion = Events_Spotting_Loss(weights=(1, 3), num_events=num_events, reduction=reduction)
+        self.event_loss_criterion = Events_Spotting_Loss(weights=weights_events, num_events=num_events,
+                                                         reduction=reduction)
         self.seg_loss_criterion = Segmentation_Loss(thresh_seg=thresh_seg, reduction='mean')
 
     def forward(self, pred_ball_position, target_ball_position, pred_events, target_events, pred_seg, target_seg):
