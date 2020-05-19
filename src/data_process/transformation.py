@@ -19,8 +19,8 @@ class Compose(object):
 class Normalize():
     def __init__(self, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225), num_frames_sequence=9, p=1.0):
         self.p = p
-        self.mean = np.repeat(np.array(mean).reshape(1, 3, 1, 1), repeats=num_frames_sequence, axis=1)
-        self.std = np.repeat(np.array(std).reshape(1, 3, 1, 1), repeats=num_frames_sequence, axis=1)
+        self.mean = np.repeat(np.array(mean).reshape(1, 1, 3), repeats=num_frames_sequence, axis=-1)
+        self.std = np.repeat(np.array(std).reshape(1, 1, 3), repeats=num_frames_sequence, axis=-1)
 
     def __call__(self, imgs, ball_position_xy, seg_img):
         if random.random() < self.p:
