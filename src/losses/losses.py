@@ -93,13 +93,14 @@ class Multi_Task_Learning_Model(nn.Module):
     """
     Original paper: "Multi-task learning using uncertainty to weigh losses for scene geometry and semantics" - CVPR 2018
     url: https://arxiv.org/pdf/1705.07115.pdf
+    refer code: https://github.com/Hui-Li/multi-task-learning-example-PyTorch
     """
 
     def __init__(self, model, num_tasks=4, num_events=2, weights_events=(1, 3), thresh_seg=0.5, input_size=(320, 128)):
         super(Multi_Task_Learning_Model, self).__init__()
         self.model = model
         self.num_tasks = num_tasks
-        self.vars = nn.Parameter(torch.zeros((num_tasks)))
+        self.log_vars = nn.Parameter(torch.zeros((num_tasks)))
         self.w = input_size[0]
         self.h = input_size[1]
         self.ball_loss_criterion = Ball_Detection_Loss(self.w, self.h)
@@ -114,9 +115,11 @@ class Multi_Task_Learning_Model(nn.Module):
         event_loss = self.event_loss_criterion(pred_events, target_events)
         seg_loss = self.seg_loss_criterion(pred_seg, target_seg)
 
-        total_loss = global_ball_loss / (self.vars[0] ** 2) + torch.log(self.vars[0])
-        total_loss += local_ball_loss / (self.vars[1] ** 2) + torch.log(self.vars[1])
-        total_loss += event_loss / (self.vars[2] ** 2) + torch.log(self.vars[2])
-        total_loss += seg_loss / (self.vars[3] ** 2) + torch.log(self.vars[3])
+        total_loss = global_ball_loss / (torch.exp(self.log_vars[0])) + self.log_vars[0]
+        total_loss += local_ball_loss / (torch.exp(self.log_vars[1])) + self.log_vars[1]
+        total_loss += event_loss / (torch.exp(self.log_vars[2])) + self.log_vars[2]
+        total_loss += seg_loss / (torch.exp(self.log_vars[3])) + self.log_vars[3]
 
-        return pred_ball_position_global, pred_ball_position_local, pred_events, pred_seg, total_loss, self.vars
+        # Final weights: [math.exp(log_var) ** 0.5 for log_var in log_vars]
+
+        return pred_ball_position_global, pred_ball_position_local, pred_events, pred_seg, total_loss, self.log_vars
