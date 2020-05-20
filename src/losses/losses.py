@@ -10,11 +10,12 @@ class Ball_Detection_Loss(nn.Module):
         self.reduction = reduction
 
     def forward(self, pred_ball_position, target_ball_position):
-        x_pred = pred_ball_position[:self.w]
-        y_pred = pred_ball_position[self.w: (self.w + self.h)]
+        x_pred = pred_ball_position[:, :self.w]
+        y_pred = pred_ball_position[:, self.w: (self.w + self.h)]
 
-        x_target = target_ball_position[:self.w]
-        y_target = target_ball_position[self.w: (self.w + self.h)]
+        x_target = target_ball_position[:, :self.w]
+        y_target = target_ball_position[:, self.w: (self.w + self.h)]
+
         loss_ball = - torch.sum(x_pred * torch.log(x_target), dim=-1) / self.w - torch.sum(y_pred * torch.log(y_target),
                                                                                            dim=-1) / self.h
         if self.reduction == 'mean':
