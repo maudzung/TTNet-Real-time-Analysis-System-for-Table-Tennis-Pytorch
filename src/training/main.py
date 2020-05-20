@@ -27,22 +27,22 @@ def train_one_epoch(train_loader, model, optimizer, epoch, configs, logger):
     # switch to train mode
     model.train()
     start_time = time.time()
-    for b_idx, (origin_imgs, aug_imgs, target_ball_position, target_events_spotting, seg_img, _, _) in enumerate(
+    for b_idx, (origin_imgs, aug_imgs, target_ball_position, target_events, target_seg, _, _) in enumerate(
             train_loader):
-        # zero the parameter gradients
-        optimizer.zero_grad()
         b_size = origin_imgs.size(0)
         target_ball_position = target_ball_position.to(configs.device)
-        target_events_spotting = target_events_spotting.to(configs.device)
-        target_seg = seg_img.to(configs.device)
+        target_events = target_events.to(configs.device)
+        target_seg = target_seg.to(configs.device)
 
         aug_imgs = aug_imgs.to(configs.device).float()
         # origin_imgs = origin_imgs.to(configs.device).float()
 
         # compute output
         with torch.set_grad_enabled(True):
+            # zero the parameter gradients
+            optimizer.zero_grad()
             pred_ball_position_global, pred_ball_position_local, pred_events, pred_seg, total_loss, _ = model(
-                origin_imgs, aug_imgs, target_ball_position, target_events_spotting, target_seg)
+                origin_imgs, aug_imgs, target_ball_position, target_events, target_seg)
 
             # compute gradient and perform backpropagation
             total_loss.backward()
@@ -68,19 +68,19 @@ def validate_one_epoch(val_loader, model, epoch, configs, logger):
     # switch to evaluate mode
     model.eval()
     start_time = time.time()
-    for b_idx, (origin_imgs, aug_imgs, target_ball_position, target_events_spotting, seg_img, _, _) in enumerate(
+    for b_idx, (origin_imgs, aug_imgs, target_ball_position, target_events, target_seg, _, _) in enumerate(
             val_loader):
         b_size = origin_imgs.size(0)
         target_ball_position = target_ball_position.to(configs.device)
-        target_events_spotting = target_events_spotting.to(configs.device)
-        target_seg = seg_img.to(configs.device)
+        target_events = target_events.to(configs.device)
+        target_seg = target_seg.to(configs.device)
 
         aug_imgs = aug_imgs.to(configs.device).float()
-        origin_imgs = origin_imgs.to(configs.device).float()
+        # origin_imgs = origin_imgs.to(configs.device).float()
         # compute output
         with torch.set_grad_enabled(False):
             pred_ball_position_global, pred_ball_position_local, pred_events, pred_seg, total_loss, _ = model(
-                origin_imgs, aug_imgs, target_ball_position, target_events_spotting, target_seg)
+                origin_imgs, aug_imgs, target_ball_position, target_events, target_seg)
 
         losses.update(total_loss.item(), b_size)
         time_infor.update(time.time() - start_time)
