@@ -50,9 +50,9 @@ class TTNet_Dataset(Dataset):
 
         # Create target for events spotting and ball position
         target_ball_possition = create_target_ball_possition(ball_position_xy, self.sigma, self.w, self.h)
-        target_events_spotting = create_target_events_spotting(event_name, self.events_dict)
+        target_events = create_target_events_spotting(event_name, self.events_dict)
 
-        return origin_imgs, aug_imgs, target_ball_possition, target_events_spotting, target_seg, ball_position_xy, event_name
+        return origin_imgs, aug_imgs, target_ball_possition, target_events, target_seg, ball_position_xy, event_name
 
 
 if __name__ == '__main__':
