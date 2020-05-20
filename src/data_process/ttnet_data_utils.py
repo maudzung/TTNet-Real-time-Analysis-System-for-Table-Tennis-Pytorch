@@ -31,6 +31,8 @@ def create_target_ball_possition(ball_position_xy, sigma=1., w=320., h=128.):
     y_pos = np.arange(0, h)
     target_ball_position[w:] = gaussian_1d(y_pos, ball_position_xy[1], sigma=sigma)
 
+    target_ball_position[target_ball_position < 1e-3] = 0.
+
     return target_ball_position
 
 
