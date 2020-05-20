@@ -66,7 +66,7 @@ if __name__ == '__main__':
     game_list = ['game_1']
     dataset_type = 'training'
     train_events_infor, val_events_infor = train_val_data_separation(configs)
-    print(len(train_events_infor))
+    print('len(train_events_infor): {}'.format(len(train_events_infor)))
     # Test transformation
     transform = Compose([
         Random_Crop(max_height_reduction_percent=0.15, max_width_reduction_percent=0.15, p=1.),
@@ -77,8 +77,8 @@ if __name__ == '__main__':
 
     ttnet_dataset = TTNet_Dataset(train_events_infor, configs.events_dict, transformations=transform)
 
-    print(len(ttnet_dataset))
-    example_index = 300
+    print('len(ttnet_dataset): {}'.format(len(ttnet_dataset)))
+    example_index = 100
     origin_imgs, aug_imgs, target_ball_possition, target_events_spotting, seg_img, ball_position_xy, event_name = ttnet_dataset.__getitem__(
         example_index)
     print('target_ball_possition.shape: {}'.format(target_ball_possition.shape))
@@ -86,7 +86,7 @@ if __name__ == '__main__':
     print('seg_img: {}'.format(seg_img.shape))
 
     origin_imgs = origin_imgs.transpose(1, 2, 0)
-    print(origin_imgs.shape)
+    print('origin_imgs.shape: {}'.format(origin_imgs.shape))
 
     out_images_dir = os.path.join(configs.working_dir, 'out_images')
     if not os.path.isdir(out_images_dir):
@@ -103,15 +103,18 @@ if __name__ == '__main__':
         'Event: {}, ball_position_xy: (x= {}, y= {})'.format(event_name, ball_position_xy[0], ball_position_xy[1]),
         fontsize=16)
     plt.savefig(os.path.join(out_images_dir, 'fig_img_{}.jpg'.format(example_index)))
+    seg_img = seg_img.transpose(1, 2, 0)
     plt.imsave(os.path.join(out_images_dir, 'seg_img_{}.jpg'.format(example_index)), seg_img)
 
     aug_imgs = aug_imgs.transpose(1, 2, 0)
+    aug_imgs = np.array(aug_imgs)
     print('aug_imgs: {}'.format(aug_imgs.shape))
 
     plt.imsave(os.path.join(out_images_dir, 'augment_seg_img_{}.jpg'.format(example_index)), seg_img)
     for i in range(configs.num_frames_sequence):
         img = aug_imgs[:, :, (i * 3): (i + 1) * 3]
         if (i == (configs.num_frames_sequence - 1)):
+            img = cv2.resize(img, (img.shape[1], img.shape[0]))
             ball_img = cv2.circle(img, tuple(ball_position_xy), radius=5, color=(255, 0, 0), thickness=2)
             ball_img = cv2.cvtColor(ball_img, cv2.COLOR_RGB2BGR)
             cv2.imwrite(os.path.join(out_images_dir, 'augment_img_{}.jpg'.format(example_index)),
