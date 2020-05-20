@@ -27,11 +27,12 @@ class Ball_Detection_Loss(nn.Module):
 class Events_Spotting_Loss(nn.Module):
     def __init__(self, weights=(1, 3), num_events=2, reduction='mean'):
         super(Events_Spotting_Loss, self).__init__()
-        self.weights = torch.tensor(weights).view(1, 2).cuda()
+        self.weights = torch.tensor(weights).view(1, 2)
         self.num_events = num_events
         self.reduction = reduction
 
     def forward(self, pred_events, target_events):
+        self.weights = self.weights.cuda()
         loss_event = - torch.sum(self.weights * pred_events * torch.log(target_events), dim=-1) / self.num_events
         if self.reduction == 'mean':
             loss_event = loss_event.mean()
