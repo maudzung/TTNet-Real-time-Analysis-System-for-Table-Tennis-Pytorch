@@ -3,11 +3,10 @@ import torch
 
 
 class Ball_Detection_Loss(nn.Module):
-    def __init__(self, w, h, reduction='mean'):
+    def __init__(self, w, h):
         super(Ball_Detection_Loss, self).__init__()
         self.w = w
         self.h = h
-        self.reduction = reduction
 
     def forward(self, pred_ball_position, target_ball_position):
         x_pred = pred_ball_position[:, :self.w]
@@ -18,73 +17,64 @@ class Ball_Detection_Loss(nn.Module):
 
         loss_ball = - torch.sum(x_pred * torch.log(x_target), dim=-1) / self.w - torch.sum(y_pred * torch.log(y_target),
                                                                                            dim=-1) / self.h
-        if self.reduction == 'mean':
-            loss_ball = loss_ball.mean()
 
         return loss_ball
 
 
 class Events_Spotting_Loss(nn.Module):
-    def __init__(self, weights=(1, 3), num_events=2, reduction='mean'):
+    def __init__(self, weights=(1, 3), num_events=2):
         super(Events_Spotting_Loss, self).__init__()
         self.weights = torch.tensor(weights).view(1, 2)
         self.num_events = num_events
-        self.reduction = reduction
 
     def forward(self, pred_events, target_events):
         self.weights = self.weights.cuda()
         loss_event = - torch.sum(self.weights * pred_events * torch.log(target_events), dim=-1) / self.num_events
-        if self.reduction == 'mean':
-            loss_event = loss_event.mean()
 
         return loss_event
 
 
 class DICE_Smotth_Loss(nn.Module):
-    def __init__(self, thresh_seg=0.5, epsilon=1e-9, reduction='mean'):
+    def __init__(self, thresh_seg=0.5, epsilon=1e-9):
         super(DICE_Smotth_Loss, self).__init__()
         self.thresh_seg = thresh_seg
         self.epsilon = epsilon
-        self.reduction = reduction
 
     def forward(self, pred_seg, target_seg):
         pred_seg = pred_seg >= self.thresh_seg
         union = pred_seg * target_seg
-        # if self.reduction == 'mean':
-        loss_dice_smooth = (torch.sum(2 * union) + self.epsilon) / (
-                torch.sum(pred_seg) + torch.sum(target_seg) + self.epsilon)
+        loss_dice_smooth = (torch.sum(2 * union, dim=(1, 2, 3)) + self.epsilon) / (
+                torch.sum(pred_seg, dim=(1, 2, 3)) + torch.sum(target_seg, dim=(1, 2, 3)) + self.epsilon)
 
         return loss_dice_smooth
 
 
 class Segmentation_Loss(nn.Module):
-    def __init__(self, thresh_seg=0.5, reduction='mean'):
+    def __init__(self, thresh_seg=0.5):
         super(Segmentation_Loss, self).__init__()
-        self.bce_criterion = torch.nn.BCELoss(reduction=reduction)
-        self.dice_criterion = DICE_Smotth_Loss(thresh_seg=thresh_seg, epsilon=1e-9, reduction=reduction)
+        self.bce_criterion = torch.nn.BCELoss(reduction='none')  # Keep the size
+        self.dice_criterion = DICE_Smotth_Loss(thresh_seg=thresh_seg, epsilon=1e-9)
 
     def forward(self, pred_seg, target_seg):
         target_seg = target_seg.float()
         loss_bce = self.bce_criterion(pred_seg, target_seg.float())
+        loss_bce = loss_bce.mean(dim=(1, 2, 3))
         loss_dice = self.dice_criterion(pred_seg, target_seg)
-
         loss_seg = loss_bce + loss_dice
 
         return loss_seg
 
 
 class Imbalance_Loss_Model(nn.Module):
-    def __init__(self, model, num_events=2, weights_events=(1, 3), thresh_seg=0.5, input_size=(320, 128),
-                 reduction='mean'):
+    def __init__(self, model, num_events=2, weights_events=(1, 3), thresh_seg=0.5, input_size=(320, 128)):
         super(Imbalance_Loss_Model, self).__init__()
         self.model = model
         self.num_events = num_events
         self.w = input_size[0]
         self.h = input_size[1]
-        self.ball_loss_criterion = Ball_Detection_Loss(self.w, self.h, reduction=reduction)
-        self.event_loss_criterion = Events_Spotting_Loss(weights=weights_events, num_events=num_events,
-                                                         reduction=reduction)
-        self.seg_loss_criterion = Segmentation_Loss(thresh_seg=thresh_seg, reduction='mean')
+        self.ball_loss_criterion = Ball_Detection_Loss(self.w, self.h)
+        self.event_loss_criterion = Events_Spotting_Loss(weights=weights_events, num_events=num_events)
+        self.seg_loss_criterion = Segmentation_Loss(thresh_seg=thresh_seg)
 
     def forward(self, original_batch_input, resize_batch_input, target_ball_position, target_events, target_seg):
         pred_ball_position_global, pred_ball_position_local, pred_events, pred_seg = self.model(original_batch_input,
@@ -105,18 +95,16 @@ class Multi_Task_Learning_Model(nn.Module):
     url: https://arxiv.org/pdf/1705.07115.pdf
     """
 
-    def __init__(self, model, num_tasks=4, num_events=2, weights_events=(1, 3), thresh_seg=0.5, input_size=(320, 128),
-                 reduction='mean'):
+    def __init__(self, model, num_tasks=4, num_events=2, weights_events=(1, 3), thresh_seg=0.5, input_size=(320, 128)):
         super(Multi_Task_Learning_Model, self).__init__()
         self.model = model
         self.num_tasks = num_tasks
         self.vars = nn.Parameter(torch.zeros((num_tasks)))
         self.w = input_size[0]
         self.h = input_size[1]
-        self.ball_loss_criterion = Ball_Detection_Loss(self.w, self.h, reduction=reduction)
-        self.event_loss_criterion = Events_Spotting_Loss(weights=weights_events, num_events=num_events,
-                                                         reduction=reduction)
-        self.seg_loss_criterion = Segmentation_Loss(thresh_seg=thresh_seg, reduction='mean')
+        self.ball_loss_criterion = Ball_Detection_Loss(self.w, self.h)
+        self.event_loss_criterion = Events_Spotting_Loss(weights=weights_events, num_events=num_events)
+        self.seg_loss_criterion = Segmentation_Loss(thresh_seg=thresh_seg)
 
     def forward(self, original_batch_input, resize_batch_input, target_ball_position, target_events, target_seg):
         pred_ball_position_global, pred_ball_position_local, pred_events, pred_seg = self.model(original_batch_input,
@@ -125,8 +113,10 @@ class Multi_Task_Learning_Model(nn.Module):
         local_ball_loss = self.ball_loss_criterion(pred_ball_position_local, target_ball_position)
         event_loss = self.event_loss_criterion(pred_events, target_events)
         seg_loss = self.seg_loss_criterion(pred_seg, target_seg)
-        total_loss = 0.
-        for subloss_idx, subloss in enumerate([global_ball_loss, local_ball_loss, event_loss, seg_loss]):
-            total_loss += subloss / (self.vars[subloss_idx] ** 2) + torch.log(self.vars[subloss_idx])
 
-        return pred_ball_position_global, pred_ball_position_local, pred_events, pred_seg, total_loss, self.vars.data.tolist()
+        total_loss = global_ball_loss / (self.vars[0] ** 2) + torch.log(self.vars[0])
+        total_loss += local_ball_loss / (self.vars[1] ** 2) + torch.log(self.vars[1])
+        total_loss += event_loss / (self.vars[2] ** 2) + torch.log(self.vars[2])
+        total_loss += seg_loss / (self.vars[3] ** 2) + torch.log(self.vars[3])
+
+        return pred_ball_position_global, pred_ball_position_local, pred_events, pred_seg, total_loss, self.vars

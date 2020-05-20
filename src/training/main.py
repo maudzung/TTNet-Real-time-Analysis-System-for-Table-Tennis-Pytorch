@@ -9,7 +9,6 @@ import torch
 from torch.utils.tensorboard import SummaryWriter
 from torchsummary import summary
 
-
 sys.path.append('../')
 
 from data_process.ttnet_dataloader import create_train_val_dataloader, create_test_dataloader
@@ -43,6 +42,8 @@ def train_one_epoch(train_loader, model, optimizer, epoch, configs, logger):
             optimizer.zero_grad()
             pred_ball_position_global, pred_ball_position_local, pred_events, pred_seg, total_loss, _ = model(
                 origin_imgs, aug_imgs, target_ball_position, target_events, target_seg)
+            # For multiple GPU
+            total_loss = torch.mean(total_loss)
 
             # compute gradient and perform backpropagation
             total_loss.backward()
@@ -81,6 +82,7 @@ def validate_one_epoch(val_loader, model, epoch, configs, logger):
         with torch.set_grad_enabled(False):
             pred_ball_position_global, pred_ball_position_local, pred_events, pred_seg, total_loss, _ = model(
                 origin_imgs, aug_imgs, target_ball_position, target_events, target_seg)
+            total_loss = torch.mean(total_loss)
 
         losses.update(total_loss.item(), b_size)
         time_infor.update(time.time() - start_time)
