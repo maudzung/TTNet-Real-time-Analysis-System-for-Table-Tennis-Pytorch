@@ -27,6 +27,9 @@ class Normalize():
             h, w, c = imgs.shape
             assert ((h == 128.) and (w == 320.) and (c == 27)), "The image need to be resized first"
             imgs = ((imgs / 255.) - self.mean) / self.std
+            # Normalize seg_img to a range of (0, 1)
+            if seg_img.max() > 1.:
+                seg_img = seg_img / 255.
 
         return imgs, ball_position_xy, seg_img
 
