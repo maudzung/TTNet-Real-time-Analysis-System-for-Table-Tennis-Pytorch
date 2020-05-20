@@ -57,15 +57,8 @@ class Resize(object):
             h, w, c = imgs.shape
             assert ((h == 1080.) and (w == 1920.) and (c == 27)), "The image need to be resized first"
 
-            resize_imgs = None
-            num_imgs = int(c / 3)
-            for i in range(num_imgs):
-                resize_img = cv2.resize(imgs[:, :, (3 * i): (3 * (i + 1))], self.new_size)
-                if i == 0:
-                    resize_imgs = resize_img
-                else:
-                    resize_imgs = np.concatenate((resize_imgs, resize_img), axis=-1)
-            imgs = resize_imgs
+            # Resize a sequence of images
+            imgs = cv2.resize(imgs, self.new_size)
             # Dont need to resize seg_img
             # Adjust ball position
             w_ratio = w / self.new_size[0]
@@ -97,12 +90,9 @@ class Random_Crop(object):
             min_y = int(random.uniform(0, h - new_h))
             max_y = int(new_h + min_y)
             h_ratio = h / new_h
-
-            num_imgs = int(c / 3)
-            for i in range(num_imgs):
-                crop_img = imgs[:, :, (3 * i): (3 * (i + 1))][min_y:max_y, min_x:max_x, :]
-                imgs[:, :, (3 * i): (3 * (i + 1))] = cv2.resize(crop_img, (w, h))
-
+            # crop a sequence of images
+            imgs = imgs[min_y:max_y, min_x:max_x, :]
+            imgs = cv2.resize(imgs, (w, h))
             # crop seg_img
             seg_img_h, seg_img_w, _ = seg_img.shape
             # 1. Resize to original
@@ -134,13 +124,8 @@ class Random_Rotate(object):
             random_angle = random.uniform(-self.rotation_angle_limit, self.rotation_angle_limit)
 
             rotate_matrix = cv2.getRotationMatrix2D(center, random_angle, 1.)
-            # Convert to radian
-            # random_angle = (np.pi / 180.0) * random_angle
-            num_imgs = int(c / 3)
-            for i in range(num_imgs):
-                imgs[:, :, (3 * i): (3 * (i + 1))] = cv2.warpAffine(imgs[:, :, (3 * i): (3 * (i + 1))], rotate_matrix,
-                                                                    (w, h), flags=cv2.INTER_LINEAR)
-
+            # Rotate a sequence of imgs
+            imgs = cv2.warpAffine(imgs, rotate_matrix, (w, h), flags=cv2.INTER_LINEAR)
             # Rotate seg_img
             seg_img = cv2.warpAffine(seg_img, rotate_matrix, (seg_img.shape[1], seg_img.shape[0]),
                                      flags=cv2.INTER_LINEAR)
@@ -160,10 +145,8 @@ class Random_HFlip(object):
         if random.random() <= self.p:
             h, w, c = imgs.shape
             assert ((h == 128.) and (w == 320.) and (c == 27)), "The image need to be resized first"
-            num_imgs = int(c / 3)
-            for i in range(num_imgs):
-                imgs[:, :, (3 * i): (3 * (i + 1))] = cv2.flip(imgs[:, :, (3 * i): (3 * (i + 1))], 1)
-
+            # Horizontal flip a sequence of imgs
+            imgs = cv2.flip(imgs, 1)
             # Horizontal flip seg_img
             seg_img = cv2.flip(seg_img, 1)
 
