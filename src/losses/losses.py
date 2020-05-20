@@ -15,7 +15,7 @@ class Ball_Detection_Loss(nn.Module):
         x_target = target_ball_position[:, :self.w]
         y_target = target_ball_position[:, self.w: (self.w + self.h)]
 
-        loss_ball = - torch.sum(x_pred * torch.log(x_target), dim=-1) / self.w - torch.sum(y_pred * torch.log(y_target),
+        loss_ball = - torch.sum(x_target * torch.log(x_pred), dim=-1) / self.w - torch.sum(y_target * torch.log(y_pred),
                                                                                            dim=-1) / self.h
 
         return loss_ball
@@ -29,7 +29,7 @@ class Events_Spotting_Loss(nn.Module):
 
     def forward(self, pred_events, target_events):
         self.weights = self.weights.cuda()
-        loss_event = - torch.sum(self.weights * pred_events * torch.log(target_events), dim=-1) / self.num_events
+        loss_event = - torch.sum(self.weights * target_events * torch.log(pred_events), dim=-1) / self.num_events
 
         return loss_event
 
