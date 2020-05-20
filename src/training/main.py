@@ -105,7 +105,6 @@ def main():
     torch.manual_seed(configs.seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
-    torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
     logger = create_logger(configs.logs_dir, configs.saved_fn)
     logger.info('>>> Created a new logger')
