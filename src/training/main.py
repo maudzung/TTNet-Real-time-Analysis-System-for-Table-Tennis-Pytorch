@@ -14,20 +14,27 @@ sys.path.append('../')
 from data_process.ttnet_dataloader import create_train_val_dataloader, create_test_dataloader
 from training.train_utils import get_model, get_optimizer, get_lr_scheduler, get_saved_state, get_metrics, \
     write_sumup_results
-from utils.misc import AverageMeter, save_checkpoint
+from utils.misc import AverageMeter, save_checkpoint, ProgressMeter
 from utils.logger import Logger
 from config.config import parse_configs
 
 
 def train_one_epoch(train_loader, model, optimizer, epoch, configs, logger):
-    time_infor = AverageMeter('Time', ':6.3f')
+    batch_time = AverageMeter('Time', ':6.3f')
+    data_time = AverageMeter('Data', ':6.3f')
     losses = AverageMeter('Loss', ':.4e')
+
+    progress = ProgressMeter(
+        len(train_loader),
+        [batch_time, data_time, losses],
+        prefix="Train - Epoch: [{}]".format(epoch))
 
     # switch to train mode
     model.train()
     start_time = time.time()
-    for b_idx, (origin_imgs, aug_imgs, target_ball_position, target_events, target_seg, _, _) in enumerate(
+    for batch_idx, (origin_imgs, aug_imgs, target_ball_position, target_events, target_seg, _, _) in enumerate(
             train_loader):
+        data_time.update(time.time() - start_time)
         b_size = origin_imgs.size(0)
         target_ball_position = target_ball_position.to(configs.device)
         target_events = target_events.to(configs.device)
@@ -37,7 +44,6 @@ def train_one_epoch(train_loader, model, optimizer, epoch, configs, logger):
         # origin_imgs = origin_imgs.to(configs.device).float()
 
         # compute output
-
         pred_ball_position_global, pred_ball_position_local, pred_events, pred_seg, total_loss, _ = model(
             origin_imgs, aug_imgs, target_ball_position, target_events, target_seg)
         # For multiple GPU
@@ -51,27 +57,31 @@ def train_one_epoch(train_loader, model, optimizer, epoch, configs, logger):
 
         losses.update(total_loss.item(), b_size)
         # measure elapsed time
-        time_infor.update(time.time() - start_time)
+        batch_time.update(time.time() - start_time)
 
-        if ((b_idx + 1) % configs.print_freq) == 0:
-            print_string = '\t--- Epoch [{}/{}] Iter [{}/{}]\t'.format(epoch, configs.train_num_epochs, b_idx,
-                                                                       len(train_loader))
-            print_string += 'Loss value: {:.5f}, avg: {:.5f}\t'.format(losses.val, losses.avg)
-            print_string += 'time: {:.2f}s\t'.format(time_infor.val)
-            logger.info(print_string)
+        # Log message
+        if ((batch_idx + 1) % configs.print_freq) == 0:
+            logger.info(progress.get_message(batch_idx))
 
     return losses.avg
 
 
 def validate_one_epoch(val_loader, model, epoch, configs, logger):
-    time_infor = AverageMeter('Time', ':6.3f')
+    batch_time = AverageMeter('Time', ':6.3f')
+    data_time = AverageMeter('Data', ':6.3f')
     losses = AverageMeter('Loss', ':.4e')
+
+    progress = ProgressMeter(
+        len(val_loader),
+        [batch_time, data_time, losses],
+        prefix="Validation - Epoch: [{}]".format(epoch))
     # switch to evaluate mode
     model.eval()
     with torch.no_grad():
         start_time = time.time()
-        for b_idx, (origin_imgs, aug_imgs, target_ball_position, target_events, target_seg, _, _) in enumerate(
+        for batch_idx, (origin_imgs, aug_imgs, target_ball_position, target_events, target_seg, _, _) in enumerate(
                 val_loader):
+            data_time.update(time.time() - start_time)
             b_size = origin_imgs.size(0)
             target_ball_position = target_ball_position.to(configs.device)
             target_events = target_events.to(configs.device)
@@ -85,15 +95,12 @@ def validate_one_epoch(val_loader, model, epoch, configs, logger):
             total_loss = torch.mean(total_loss)
 
             losses.update(total_loss.item(), b_size)
-            time_infor.update(time.time() - start_time)
-
             # measure elapsed time
-            if ((b_idx + 1) % configs.print_freq) == 0:
-                print_string = '\t--- Epoch [{}/{}] Iter [{}/{}]\t'.format(epoch, configs.train_num_epochs, b_idx,
-                                                                           len(val_loader))
-                print_string += 'Loss value: {:.5f}, avg: {:.5f}\t'.format(losses.val, losses.avg)
-                print_string += 'time: {:.2f}s\t'.format(time_infor.val)
-                logger.info(print_string)
+            batch_time.update(time.time() - start_time)
+
+            # Log message
+            if ((batch_idx + 1) % configs.print_freq) == 0:
+                logger.info(progress.get_message(batch_idx))
 
     return losses.avg
 
