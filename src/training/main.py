@@ -20,8 +20,8 @@ from config.config import parse_configs
 
 
 def train_one_epoch(train_loader, model, optimizer, epoch, configs, logger):
-    time_infor = AverageMeter()
-    losses = AverageMeter()
+    time_infor = AverageMeter('Time', ':6.3f')
+    losses = AverageMeter('Loss', ':.4e')
 
     # switch to train mode
     model.train()
@@ -64,8 +64,8 @@ def train_one_epoch(train_loader, model, optimizer, epoch, configs, logger):
 
 
 def validate_one_epoch(val_loader, model, epoch, configs, logger):
-    time_infor = AverageMeter()
-    losses = AverageMeter()
+    time_infor = AverageMeter('Time', ':6.3f')
+    losses = AverageMeter('Loss', ':.4e')
     # switch to evaluate mode
     model.eval()
     with torch.no_grad():
