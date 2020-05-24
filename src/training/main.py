@@ -37,17 +37,17 @@ def train_one_epoch(train_loader, model, optimizer, epoch, configs, logger):
         # origin_imgs = origin_imgs.to(configs.device).float()
 
         # compute output
-        with torch.set_grad_enabled(True):
-            # zero the parameter gradients
-            optimizer.zero_grad()
-            pred_ball_position_global, pred_ball_position_local, pred_events, pred_seg, total_loss, _ = model(
-                origin_imgs, aug_imgs, target_ball_position, target_events, target_seg)
-            # For multiple GPU
-            total_loss = torch.mean(total_loss)
 
-            # compute gradient and perform backpropagation
-            total_loss.backward()
-            optimizer.step()
+        pred_ball_position_global, pred_ball_position_local, pred_events, pred_seg, total_loss, _ = model(
+            origin_imgs, aug_imgs, target_ball_position, target_events, target_seg)
+        # For multiple GPU
+        total_loss = torch.mean(total_loss)
+
+        # zero the parameter gradients
+        optimizer.zero_grad()
+        # compute gradient and perform backpropagation
+        total_loss.backward()
+        optimizer.step()
 
         losses.update(total_loss.item(), b_size)
         # measure elapsed time
@@ -68,32 +68,32 @@ def validate_one_epoch(val_loader, model, epoch, configs, logger):
     losses = AverageMeter()
     # switch to evaluate mode
     model.eval()
-    start_time = time.time()
-    for b_idx, (origin_imgs, aug_imgs, target_ball_position, target_events, target_seg, _, _) in enumerate(
-            val_loader):
-        b_size = origin_imgs.size(0)
-        target_ball_position = target_ball_position.to(configs.device)
-        target_events = target_events.to(configs.device)
-        target_seg = target_seg.to(configs.device)
+    with torch.no_grad():
+        start_time = time.time()
+        for b_idx, (origin_imgs, aug_imgs, target_ball_position, target_events, target_seg, _, _) in enumerate(
+                val_loader):
+            b_size = origin_imgs.size(0)
+            target_ball_position = target_ball_position.to(configs.device)
+            target_events = target_events.to(configs.device)
+            target_seg = target_seg.to(configs.device)
 
-        aug_imgs = aug_imgs.to(configs.device).float()
-        # origin_imgs = origin_imgs.to(configs.device).float()
-        # compute output
-        with torch.set_grad_enabled(False):
+            aug_imgs = aug_imgs.to(configs.device).float()
+            # origin_imgs = origin_imgs.to(configs.device).float()
+            # compute output
             pred_ball_position_global, pred_ball_position_local, pred_events, pred_seg, total_loss, _ = model(
                 origin_imgs, aug_imgs, target_ball_position, target_events, target_seg)
             total_loss = torch.mean(total_loss)
 
-        losses.update(total_loss.item(), b_size)
-        time_infor.update(time.time() - start_time)
+            losses.update(total_loss.item(), b_size)
+            time_infor.update(time.time() - start_time)
 
-        # measure elapsed time
-        if ((b_idx + 1) % configs.print_freq) == 0:
-            print_string = '\t--- Epoch [{}/{}] Iter [{}/{}]\t'.format(epoch, configs.train_num_epochs, b_idx,
-                                                                       len(val_loader))
-            print_string += 'Loss value: {:.5f}, avg: {:.5f}\t'.format(losses.val, losses.avg)
-            print_string += 'time: {:.2f}s\t'.format(time_infor.val)
-            logger.info(print_string)
+            # measure elapsed time
+            if ((b_idx + 1) % configs.print_freq) == 0:
+                print_string = '\t--- Epoch [{}/{}] Iter [{}/{}]\t'.format(epoch, configs.train_num_epochs, b_idx,
+                                                                           len(val_loader))
+                print_string += 'Loss value: {:.5f}, avg: {:.5f}\t'.format(losses.val, losses.avg)
+                print_string += 'time: {:.2f}s\t'.format(time_infor.val)
+                logger.info(print_string)
 
     return losses.avg
 
