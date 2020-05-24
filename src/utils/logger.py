@@ -2,33 +2,37 @@ import os
 import logging
 
 
-def create_logger(logs_dir, saved_fn):
+class Logger():
     """
-    Create logger to save logs during training
-    Args:
-        logs_dir:
-        saved_fn:
+        Create logger to save logs during training
+        Args:
+            logs_dir:
+            saved_fn:
 
-    Returns:
+        Returns:
 
-    """
-    logger_fn = 'logger_{}.txt'.format(saved_fn)
-    logger_path = os.path.join(logs_dir, logger_fn)
+        """
 
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.INFO)
+    def __init__(self, logs_dir, saved_fn):
+        logger_fn = 'logger_{}.txt'.format(saved_fn)
+        logger_path = os.path.join(logs_dir, logger_fn)
 
-    # formatter = logging.Formatter('%(asctime)s:File %(module)s.py:Func %(funcName)s:Line %(lineno)d:%(levelname)s: %(message)s')
-    formatter = logging.Formatter(
-        '%(asctime)s: %(module)s.py - %(funcName)s(), at Line %(lineno)d:%(levelname)s:\n%(message)s')
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(logging.INFO)
 
-    file_handler = logging.FileHandler(logger_path)
-    file_handler.setLevel(logging.INFO)
-    file_handler.setFormatter(formatter)
+        # formatter = logging.Formatter('%(asctime)s:File %(module)s.py:Func %(funcName)s:Line %(lineno)d:%(levelname)s: %(message)s')
+        formatter = logging.Formatter(
+            '%(asctime)s: %(module)s.py - %(funcName)s(), at Line %(lineno)d:%(levelname)s:\n%(message)s')
 
-    stream_handler = logging.StreamHandler()
-    stream_handler.setFormatter(formatter)
+        file_handler = logging.FileHandler(logger_path)
+        file_handler.setLevel(logging.INFO)
+        file_handler.setFormatter(formatter)
 
-    logger.addHandler(file_handler)
-    logger.addHandler(stream_handler)
-    return logger
+        stream_handler = logging.StreamHandler()
+        stream_handler.setFormatter(formatter)
+
+        self.logger.addHandler(file_handler)
+        self.logger.addHandler(stream_handler)
+
+    def info(self, message):
+        self.logger.info(message)

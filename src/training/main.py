@@ -15,7 +15,7 @@ from data_process.ttnet_dataloader import create_train_val_dataloader, create_te
 from training.train_utils import get_model, get_optimizer, get_lr_scheduler, get_saved_state, get_metrics, \
     write_sumup_results
 from utils.misc import AverageMeter, save_checkpoint
-from utils.logger import create_logger
+from utils.logger import Logger
 from config.config import parse_configs
 
 
@@ -108,7 +108,7 @@ def main():
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-    logger = create_logger(configs.logs_dir, configs.saved_fn)
+    logger = Logger(configs.logs_dir, configs.saved_fn)
     logger.info('>>> Created a new logger')
     logger.info('>>> configs: {}'.format(configs))
 
