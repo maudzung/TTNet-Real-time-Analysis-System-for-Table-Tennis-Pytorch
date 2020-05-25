@@ -63,6 +63,8 @@ def train_one_epoch(train_loader, model, optimizer, epoch, configs, logger):
         if ((batch_idx + 1) % configs.print_freq) == 0:
             logger.info(progress.get_message(batch_idx))
 
+        start_time = time.time()
+
     return losses.avg
 
 
@@ -102,6 +104,8 @@ def validate_one_epoch(val_loader, model, epoch, configs, logger):
             if ((batch_idx + 1) % configs.print_freq) == 0:
                 logger.info(progress.get_message(batch_idx))
 
+            start_time = time.time()
+
     return losses.avg
 
 
@@ -109,11 +113,12 @@ def main():
     configs = parse_configs()
 
     # Re-produce results
-    random.seed(configs.seed)
-    np.random.seed(configs.seed)
-    torch.manual_seed(configs.seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
+    if configs.seed is not None:
+        random.seed(configs.seed)
+        np.random.seed(configs.seed)
+        torch.manual_seed(configs.seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
 
     logger = Logger(configs.logs_dir, configs.saved_fn)
     logger.info('>>> Created a new logger')
