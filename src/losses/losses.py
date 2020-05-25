@@ -60,7 +60,7 @@ class Segmentation_Loss(nn.Module):
         loss_bce = self.bce_criterion(pred_seg, target_seg.float())
         loss_bce = loss_bce.mean(dim=(1, 2, 3))
         loss_dice = self.dice_criterion(pred_seg, target_seg)
-        loss_seg = loss_bce + loss_dice
+        loss_seg = (1. - loss_dice) + loss_bce
 
         return loss_seg
 
