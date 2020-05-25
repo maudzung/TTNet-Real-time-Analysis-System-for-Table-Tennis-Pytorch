@@ -22,7 +22,7 @@ def extract_images_from_videos(video_path, out_images_dir):
     print('video_fn: {}.mp4, number of frames: {}, f_width: {}, f_height: {}'.format(video_fn, n_frames, f_width,
                                                                                      f_height))
 
-    frame_cnt = 0
+    frame_cnt = -1
     while True:
         ret, img = video_cap.read()
         if ret:
@@ -36,6 +36,7 @@ def extract_images_from_videos(video_path, out_images_dir):
             break
         if cv2.waitKey(10) & 0xFF == ord('q'):
             break
+    video_cap.release()
     print('done extraction: {}'.format(video_path))
 
 

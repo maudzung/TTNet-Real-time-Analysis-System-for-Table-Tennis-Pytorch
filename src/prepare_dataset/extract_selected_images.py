@@ -54,6 +54,7 @@ def extract_images_from_videos(video_path, events_annos_path, out_images_dir):
             break
         if cv2.waitKey(10) & 0xFF == ord('q'):
             break
+    video_cap.release()
     print('done extraction: {}'.format(video_path))
 
 
