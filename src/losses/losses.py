@@ -3,10 +3,11 @@ import torch
 
 
 class Ball_Detection_Loss(nn.Module):
-    def __init__(self, w, h):
+    def __init__(self, w, h, epsilon=1e-9):
         super(Ball_Detection_Loss, self).__init__()
         self.w = w
         self.h = h
+        self.epsilon = epsilon
 
     def forward(self, pred_ball_position, target_ball_position):
         x_pred = pred_ball_position[:, :self.w]
@@ -15,21 +16,23 @@ class Ball_Detection_Loss(nn.Module):
         x_target = target_ball_position[:, :self.w]
         y_target = target_ball_position[:, self.w: (self.w + self.h)]
 
-        loss_ball = - torch.sum(x_target * torch.log(x_pred), dim=-1) / self.w - torch.sum(y_target * torch.log(y_pred),
-                                                                                           dim=-1) / self.h
+        loss_ball = - torch.sum(x_target * torch.log(x_pred + self.epsilon), dim=-1) / self.w - torch.sum(
+            y_target * torch.log(y_pred + self.epsilon), dim=-1) / self.h
 
         return loss_ball
 
 
 class Events_Spotting_Loss(nn.Module):
-    def __init__(self, weights=(1, 3), num_events=2):
+    def __init__(self, weights=(1, 3), num_events=2, epsilon=1e-9):
         super(Events_Spotting_Loss, self).__init__()
         self.weights = torch.tensor(weights).view(1, 2)
         self.num_events = num_events
+        self.epsilon = epsilon
 
     def forward(self, pred_events, target_events):
         self.weights = self.weights.cuda()
-        loss_event = - torch.sum(self.weights * target_events * torch.log(pred_events), dim=-1) / self.num_events
+        loss_event = - torch.sum(self.weights * target_events * torch.log(pred_events + self.epsilon),
+                                 dim=-1) / self.num_events
 
         return loss_event
 
