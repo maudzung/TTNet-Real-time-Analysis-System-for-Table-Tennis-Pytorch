@@ -6,6 +6,7 @@ from sklearn.model_selection import train_test_split
 import torch
 import numpy as np
 
+from collections import Counter
 
 def load_raw_img(img_path):
     """
@@ -116,3 +117,10 @@ if __name__ == '__main__':
     event_name = 'net'
     target_event = create_target_events_spotting(event_name, configs.events_dict)
     print(target_event)
+    """
+    num train_events_infor: 3044, train_events_labels: 3044
+    num val_events_infor: 762, val_events_labels: 762
+    Counter events_infor: Counter({0: 1537, 1: 1170, 2: 1099})
+    Counter train_events_labels: Counter({0: 1229, 1: 936, 2: 879})
+    Counter val_events_labels: Counter({0: 308, 1: 234, 2: 220})
+    """

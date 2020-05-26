@@ -113,7 +113,7 @@ def main_worker(gpu, ngpus_per_node, configs):
     logger.info(">>> Loading dataset & getting dataloader...")
     # Create dataloader
     train_loader, val_loader, train_sampler = create_train_val_dataloader(configs)
-    print('number of samples in train set: {}, val set: {}'.format(len(train_loader.dataset), len(val_loader.dataset)))
+    logger.info('number of batches in train set: {}, val set: {}'.format(len(train_loader), len(val_loader)))
 
     optimizer = get_optimizer(configs, model, is_warm_up=False)
     lr_scheduler = get_lr_scheduler(optimizer, configs)

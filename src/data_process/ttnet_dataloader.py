@@ -74,7 +74,6 @@ if __name__ == '__main__':
     configs = parse_configs()
     configs.distributed = False # For testing
     train_dataloader, val_dataloader, train_sampler = create_train_val_dataloader(configs)
-    for b_idx, (file_paths, points_sets, targets) in enumerate(train_dataloader):
-        if b_idx != 0:
-            break
-        print('points_sets: {}, targets: {}'.format(points_sets.size(), targets.size()))
+    print('len val_dataloader: {}'.format(len(val_dataloader)))
+    # for b_idx, data in enumerate(val_dataloader):
+    #     print(b_idx)
