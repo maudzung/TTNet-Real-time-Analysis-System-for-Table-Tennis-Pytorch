@@ -9,7 +9,8 @@ from torch.optim.lr_scheduler import StepLR, ReduceLROnPlateau
 sys.path.append('../')
 
 from models.TTNet import TTNet
-from losses.losses import Imbalance_Loss_Model, Multi_Task_Learning_Model
+from models.unbalanced_loss_model import Unbalance_Loss_Model
+from models.multi_task_learning_model import Multi_Task_Learning_Model
 
 
 def get_model(configs):
@@ -30,7 +31,7 @@ def get_model(configs):
         model = Multi_Task_Learning_Model(ttnet_model, num_tasks=4, num_events=2, weights_events=(1, 3), thresh_seg=0.5,
                                           input_size=(320, 128))
     else:
-        model = Imbalance_Loss_Model(ttnet_model, num_events=2, weights_events=(1, 3), thresh_seg=0.5,
+        model = Unbalance_Loss_Model(ttnet_model, num_events=2, weights_events=(1, 3), thresh_seg=0.5,
                                      input_size=(320, 128))
 
     return model

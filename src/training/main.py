@@ -106,9 +106,11 @@ def main_worker(gpu, ngpus_per_node, configs):
     elif configs.gpu is not None:
         torch.cuda.set_device(configs.gpu)
         model = model.cuda(configs.gpu)
-    else:
+    elif configs.num_gpus > 1:
         # DataParallel will divide and allocate batch_size to all available GPUs
         model = torch.nn.DataParallel(model).cuda()
+    else:
+        pass
 
     logger.info(">>> Loading dataset & getting dataloader...")
     # Create dataloader
