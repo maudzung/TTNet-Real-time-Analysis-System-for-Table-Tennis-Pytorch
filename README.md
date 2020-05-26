@@ -8,7 +8,8 @@ The implementation for the paper "TTNet: Real-time temporal and spatial video an
 - [x] Ball detection local stage (refinement)
 - [x] Events Spotting detection (Bounce and Net hit)
 - [x] Semantic Segmentation (Human, table, and scoreboard)
-- [x] Multi-Task learning
+- [x] [Multi-Task learning](https://arxiv.org/pdf/1705.07115.pdf)
+- [x] [Distributed Data Parallel Training](https://github.com/pytorch/examples/tree/master/distributed/ddp)
 - [ ] Evaluate
 
 ## Source code structure
