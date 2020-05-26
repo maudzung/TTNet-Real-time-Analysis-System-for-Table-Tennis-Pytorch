@@ -161,7 +161,7 @@ class TTNet(nn.Module):
             resize_batch_input)
 
         input_ball_local = self.crop_original_batch(original_batch_input, resize_batch_input, pred_ball_global)
-        input_ball_local = input_ball_local.cuda()
+        # input_ball_local = input_ball_local.cuda()
         pred_ball_local, local_features, _, _, _, _ = self.ball_local_stage(input_ball_local)
 
         pred_eventspotting = self.events_spotting(global_features, local_features)

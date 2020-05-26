@@ -30,7 +30,7 @@ def parse_configs():
     ####################################################################
     parser.add_argument('--num_filepaths', type=int, default=None, help='Test with small dataset')
     parser.add_argument('--num_workers', type=int, default=8)
-    parser.add_argument('--batch_size', type=int, default=4)
+    parser.add_argument('--batch_size', type=int, default=16)
     parser.add_argument('--data_sampler', type=bool, default=False)
 
     parser.add_argument('--print_freq', type=int, default=10)
@@ -54,6 +54,24 @@ def parse_configs():
     parser.add_argument('--train_earlystop_patience', type=int, default=12)
 
     ####################################################################
+    ##############     Distributed Data Parallel            ############
+    ####################################################################
+    parser.add_argument('--world-size', default=-1, type=int,
+                        help='number of nodes for distributed training')
+    parser.add_argument('--rank', default=-1, type=int,
+                        help='node rank for distributed training')
+    parser.add_argument('--dist-url', default='tcp://224.66.41.62:23456', type=str,
+                        help='url used to set up distributed training')
+    parser.add_argument('--dist-backend', default='nccl', type=str,
+                        help='distributed backend')
+    parser.add_argument('--gpu', default=None, type=int,
+                        help='GPU id to use.')
+    parser.add_argument('--multiprocessing-distributed', action='store_true',
+                        help='Use multi-processing distributed training to launch '
+                             'N processes per node, which has N GPUs. This is the '
+                             'fastest way to use PyTorch for either single node or '
+                             'multi node data parallel training')
+    ####################################################################
     ##############     Evaluation configurations     ###################
     ####################################################################
     parser.add_argument('--is_test_during_training', type=bool, default=True)
@@ -66,7 +84,8 @@ def parse_configs():
     ####################################################################
     configs.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     configs.num_gpus = torch.cuda.device_count()
-    configs.pin_memory = False
+
+    configs.pin_memory = True
 
     ####################################################################
     ##############     Data configs            ###################

@@ -1,3 +1,4 @@
+import torch
 from torch.utils.data import DataLoader
 
 from data_process.ttnet_dataset import TTNet_Dataset
@@ -23,7 +24,6 @@ def create_train_val_dataloader(configs):
     ], p=1.)
 
     val_transform = Compose([
-        Random_Crop(max_height_reduction_percent=0.15, max_width_reduction_percent=0.15, p=1.),
         Resize(new_size=(320, 128), p=1.0),
         Normalize(p=1.)
     ], p=1.)
@@ -31,15 +31,18 @@ def create_train_val_dataloader(configs):
     train_events_infor, val_events_infor = train_val_data_separation(configs)
 
     train_dataset = TTNet_Dataset(train_events_infor, configs.events_dict, transformations=train_transform)
-
     val_dataset = TTNet_Dataset(val_events_infor, configs.events_dict, transformations=val_transform)
+    if configs.distributed:
+        train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
+    else:
+        train_sampler = None
+    train_dataloader = DataLoader(train_dataset, batch_size=configs.batch_size, shuffle=(train_sampler is None),
+                                  pin_memory=configs.pin_memory, num_workers=configs.num_workers, sampler=train_sampler)
 
-    train_dataloader = DataLoader(train_dataset, batch_size=configs.batch_size, shuffle=True,
-                                  pin_memory=configs.pin_memory, num_workers=configs.num_workers)
+    val_dataloader = DataLoader(val_dataset, batch_size=configs.batch_size, shuffle=False,
+                                pin_memory=configs.pin_memory, num_workers=configs.num_workers)
 
-    val_dataloader = DataLoader(val_dataset, batch_size=configs.batch_size, pin_memory=configs.pin_memory,
-                                num_workers=configs.num_workers)
-    return train_dataloader, val_dataloader
+    return train_dataloader, val_dataloader, train_sampler
 
 
 def create_test_dataloader(configs):
@@ -60,8 +63,8 @@ def create_test_dataloader(configs):
     test_events_infor = get_events_infor(configs.train_game_list, configs, dataset_type)
     test_dataset = TTNet_Dataset(test_events_infor, configs.events_dict, transformations=test_transform)
 
-    test_dataloader = DataLoader(test_dataset, batch_size=configs.batch_size, pin_memory=configs.pin_memory,
-                                 num_workers=configs.num_workers)
+    test_dataloader = DataLoader(test_dataset, batch_size=configs.batch_size, shuffle=False,
+                                 pin_memory=configs.pin_memory, num_workers=configs.num_workers)
     return test_dataloader
 
 
@@ -69,7 +72,8 @@ if __name__ == '__main__':
     from config.config import parse_configs
 
     configs = parse_configs()
-    train_dataloader, val_dataloader = create_train_val_dataloader(configs)
+    configs.distributed = False # For testing
+    train_dataloader, val_dataloader, train_sampler = create_train_val_dataloader(configs)
     for b_idx, (file_paths, points_sets, targets) in enumerate(train_dataloader):
         if b_idx != 0:
             break
