@@ -10,20 +10,23 @@ from data_process.ttnet_data_utils import load_raw_img, create_target_ball_possi
 
 
 class TTNet_Dataset(Dataset):
-    def __init__(self, events_infor, events_dict, sigma=1., input_size=(320, 128), transformations=None):
+    def __init__(self, events_infor, events_dict, sigma=1., input_size=(320, 128), spatial_transform=None, resize=None, nonspatial_transform=None):
         self.events_infor = events_infor
         self.events_dict = events_dict
         self.sigma = sigma
         self.w = input_size[0]
         self.h = input_size[1]
-        self.transformations = transformations
-        assert self.transformations is not None, "At lease, need to resize image to input_size"
+        self.spatial_transform = spatial_transform
+        self.resize = resize
+        self.nonspatial_transform = nonspatial_transform
+        assert self.resize is not None, "At lease, need to resize images to input_size"
+        assert self.nonspatial_transform is not None, "At lease, need to normalize images"
 
     def __len__(self):
         return len(self.events_infor)
 
     def __getitem__(self, index):
-        img_path_list, ball_position_xy, event_name, seg_path = self.events_infor[index]
+        img_path_list, org_ball_pos_xy, event_name, seg_path = self.events_infor[index]
         # event_class = self.events_dict[event_name]
         # print('event_name: {}'.format(event_name))
         # Load segmentation
@@ -39,9 +42,16 @@ class TTNet_Dataset(Dataset):
                 origin_imgs = np.concatenate((origin_imgs, img), axis=-1)
 
         # Apply augmentation
-        aug_imgs, ball_position_xy, seg_img = self.transformations(origin_imgs, ball_position_xy, seg_img)
+        if self.spatial_transform:
+            origin_imgs, org_ball_pos_xy, seg_img = self.spatial_transform(origin_imgs, org_ball_pos_xy, seg_img)
+        # resize
+        resized_imgs, ball_pos_global_xy, seg_img = self.resize(origin_imgs, org_ball_pos_xy, seg_img)
+        # random brightness, normalize
+        origin_imgs, *_ = self.nonspatial_transform(origin_imgs, None, None)
+        resized_imgs, *_ = self.nonspatial_transform(resized_imgs, None, None)
+
         # Transpose (H, W, C) to (C, H, W) --> fit input of TTNet model
-        aug_imgs = aug_imgs.transpose(2, 0, 1)
+        resized_imgs = resized_imgs.transpose(2, 0, 1)
         origin_imgs = origin_imgs.transpose(2, 0, 1)
         target_seg = seg_img.transpose(2, 0, 1).astype(np.float)
         # Segmentation mask should be in a range of (0, 1)
@@ -49,10 +59,10 @@ class TTNet_Dataset(Dataset):
             target_seg = target_seg / 255.
 
         # Create target for events spotting and ball position
-        target_ball_possition = create_target_ball_possition(ball_position_xy, self.sigma, self.w, self.h)
+        target_ball_possition = create_target_ball_possition(ball_pos_global_xy, self.sigma, self.w, self.h)
         target_events = create_target_events_spotting(event_name, self.events_dict)
 
-        return origin_imgs, aug_imgs, target_ball_possition, target_events, target_seg, ball_position_xy, event_name
+        return origin_imgs, resized_imgs, target_ball_possition, target_events, target_seg, ball_pos_global_xy, event_name
 
 
 if __name__ == '__main__':

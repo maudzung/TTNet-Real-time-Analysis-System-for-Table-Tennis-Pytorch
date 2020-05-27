@@ -17,21 +17,20 @@ def create_train_val_dataloader(configs):
     """
     train_transform = Compose([
         Random_Crop(max_reduction_percent=0.15, p=1.),
-        Resize(new_size=(320, 128), p=1.0),
         Random_HFlip(p=0.5),
         Random_Rotate(rotation_angle_limit=15, p=0.5),
-        Normalize(p=1.)
-    ], p=1.)
-
-    val_transform = Compose([
         Resize(new_size=(320, 128), p=1.0),
         Normalize(p=1.)
     ], p=1.)
+    resize_transform = Resize(new_size=(320, 128), p=1.0)
+    nonspatial_transform = Normalize(p=1.)
 
     train_events_infor, val_events_infor = train_val_data_separation(configs)
 
-    train_dataset = TTNet_Dataset(train_events_infor, configs.events_dict, transformations=train_transform)
-    val_dataset = TTNet_Dataset(val_events_infor, configs.events_dict, transformations=val_transform)
+    train_dataset = TTNet_Dataset(train_events_infor, configs.events_dict, spatial_transform=train_transform,
+                                  resize=resize_transform, nonspatial_transform=nonspatial_transform)
+    val_dataset = TTNet_Dataset(val_events_infor, configs.events_dict, spatial_transform=None, resize=resize_transform,
+                                nonspatial_transform=nonspatial_transform)
     if configs.distributed:
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
     else:
@@ -71,7 +70,7 @@ if __name__ == '__main__':
     from config.config import parse_configs
 
     configs = parse_configs()
-    configs.distributed = False # For testing
+    configs.distributed = False  # For testing
     train_dataloader, val_dataloader, train_sampler = create_train_val_dataloader(configs)
     print('len val_dataloader: {}'.format(len(val_dataloader)))
     # for b_idx, data in enumerate(val_dataloader):
