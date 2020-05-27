@@ -15,19 +15,17 @@ def create_train_val_dataloader(configs):
     Returns:
 
     """
-    train_transform = Compose([
+    train_spatial_transform = Compose([
         Random_Crop(max_reduction_percent=0.15, p=1.),
         Random_HFlip(p=0.5),
         Random_Rotate(rotation_angle_limit=15, p=0.5),
-        Resize(new_size=(320, 128), p=1.0),
-        Normalize(p=1.)
     ], p=1.)
     resize_transform = Resize(new_size=(320, 128), p=1.0)
     nonspatial_transform = Normalize(p=1.)
 
     train_events_infor, val_events_infor = train_val_data_separation(configs)
 
-    train_dataset = TTNet_Dataset(train_events_infor, configs.events_dict, spatial_transform=train_transform,
+    train_dataset = TTNet_Dataset(train_events_infor, configs.events_dict, spatial_transform=train_spatial_transform,
                                   resize=resize_transform, nonspatial_transform=nonspatial_transform)
     val_dataset = TTNet_Dataset(val_events_infor, configs.events_dict, spatial_transform=None, resize=resize_transform,
                                 nonspatial_transform=nonspatial_transform)
