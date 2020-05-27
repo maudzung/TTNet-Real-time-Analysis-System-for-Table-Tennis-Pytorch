@@ -24,12 +24,7 @@ class Normalize():
 
     def __call__(self, imgs, ball_position_xy, seg_img):
         if random.random() < self.p:
-            h, w, c = imgs.shape
-            assert ((h == 128.) and (w == 320.) and (c == 27)), "The image need to be resized first"
             imgs = ((imgs / 255.) - self.mean) / self.std
-            # Normalize seg_img to a range of (0, 1)
-            if seg_img.max() > 1.:
-                seg_img = seg_img / 255.
 
         return imgs, ball_position_xy, seg_img
 
@@ -55,8 +50,6 @@ class Resize(object):
     def __call__(self, imgs, ball_position_xy, seg_img):
         if random.random() <= self.p:
             h, w, c = imgs.shape
-            assert ((h == 1080.) and (w == 1920.) and (c == 27)), "The image need to be resized first"
-
             # Resize a sequence of images
             imgs = cv2.resize(imgs, self.new_size)
             # Dont need to resize seg_img
@@ -69,24 +62,22 @@ class Resize(object):
 
 
 class Random_Crop(object):
-    def __init__(self, max_height_reduction_percent=0.15, max_width_reduction_percent=0.15, p=0.5):
-        self.max_height_reduction_percent = max_height_reduction_percent
-        self.max_width_reduction_percent = max_width_reduction_percent
+    def __init__(self, max_reduction_percent=0.15, p=0.5):
+        self.max_reduction_percent = max_reduction_percent
         self.p = p
 
     def __call__(self, imgs, ball_position_xy, seg_img):
         # imgs are before resizing
         if random.random() <= self.p:
             h, w, c = imgs.shape
-            assert ((h == 1080.) and (w == 1920.) and (c == 27)), "The original images are needed"
-
             # Calculate min_x, max_x, min_y, max_y
-            new_w = random.uniform(1. - self.max_width_reduction_percent, 1.) * w
+            remain_percent = random.uniform(1. - self.max_reduction_percent, 1.)
+            new_w = remain_percent * w
             min_x = int(random.uniform(0, w - new_w))
             max_x = int(min_x + new_w)
             w_ratio = w / new_w
 
-            new_h = random.uniform(1. - self.max_height_reduction_percent, 1.) * h
+            new_h = remain_percent * h
             min_y = int(random.uniform(0, h - new_h))
             max_y = int(new_h + min_y)
             h_ratio = h / new_h
@@ -117,8 +108,6 @@ class Random_Rotate(object):
     def __call__(self, imgs, ball_position_xy, seg_img):
         if random.random() <= self.p:
             h, w, c = imgs.shape
-            assert ((h == 128.) and (w == 320.) and (c == 27)), "The image need to be resized first"
-
             center = (int(w / 2), int(h / 2))
 
             random_angle = random.uniform(-self.rotation_angle_limit, self.rotation_angle_limit)
@@ -144,7 +133,6 @@ class Random_HFlip(object):
     def __call__(self, imgs, ball_position_xy, seg_img):
         if random.random() <= self.p:
             h, w, c = imgs.shape
-            assert ((h == 128.) and (w == 320.) and (c == 27)), "The image need to be resized first"
             # Horizontal flip a sequence of imgs
             imgs = cv2.flip(imgs, 1)
             # Horizontal flip seg_img

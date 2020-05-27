@@ -16,7 +16,7 @@ def create_train_val_dataloader(configs):
 
     """
     train_transform = Compose([
-        Random_Crop(max_height_reduction_percent=0.15, max_width_reduction_percent=0.15, p=1.),
+        Random_Crop(max_reduction_percent=0.15, p=1.),
         Resize(new_size=(320, 128), p=1.0),
         Random_HFlip(p=0.5),
         Random_Rotate(rotation_angle_limit=15, p=0.5),
@@ -55,7 +55,6 @@ def create_test_dataloader(configs):
 
     """
     test_transform = Compose([
-        Random_Crop(max_height_reduction_percent=0.15, max_width_reduction_percent=0.15, p=1.),
         Resize(new_size=(320, 128), p=1.0),
         Normalize(p=1.)
     ], p=1.)

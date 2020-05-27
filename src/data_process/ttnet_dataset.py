@@ -17,6 +17,7 @@ class TTNet_Dataset(Dataset):
         self.w = input_size[0]
         self.h = input_size[1]
         self.transformations = transformations
+        assert self.transformations is not None, "At lease, need to resize image to input_size"
 
     def __len__(self):
         return len(self.events_infor)
@@ -38,15 +39,14 @@ class TTNet_Dataset(Dataset):
                 origin_imgs = np.concatenate((origin_imgs, img), axis=-1)
 
         # Apply augmentation
-        assert self.transformations is not None, "At lease, need to resize image to input_size"
-
         aug_imgs, ball_position_xy, seg_img = self.transformations(origin_imgs, ball_position_xy, seg_img)
         # Transpose (H, W, C) to (C, H, W) --> fit input of TTNet model
         aug_imgs = aug_imgs.transpose(2, 0, 1)
-
-        # Transpose (H, W, C) to (C, H, W) --> fit input of TTNet model
         origin_imgs = origin_imgs.transpose(2, 0, 1)
         target_seg = seg_img.transpose(2, 0, 1)
+        # Segmentation mask should be in a range of (0, 1)
+        if target_seg.max() > 1.:
+            target_seg /= 255.
 
         # Create target for events spotting and ball position
         target_ball_possition = create_target_ball_possition(ball_position_xy, self.sigma, self.w, self.h)
