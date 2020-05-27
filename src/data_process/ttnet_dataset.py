@@ -43,10 +43,10 @@ class TTNet_Dataset(Dataset):
         # Transpose (H, W, C) to (C, H, W) --> fit input of TTNet model
         aug_imgs = aug_imgs.transpose(2, 0, 1)
         origin_imgs = origin_imgs.transpose(2, 0, 1)
-        target_seg = seg_img.transpose(2, 0, 1)
+        target_seg = seg_img.transpose(2, 0, 1).astype(np.float)
         # Segmentation mask should be in a range of (0, 1)
         if target_seg.max() > 1.:
-            target_seg /= 255.
+            target_seg = target_seg / 255.
 
         # Create target for events spotting and ball position
         target_ball_possition = create_target_ball_possition(ball_position_xy, self.sigma, self.w, self.h)
