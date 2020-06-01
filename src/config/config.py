@@ -66,6 +66,9 @@ def parse_configs():
                         help='distributed backend')
     parser.add_argument('--gpu_idx', default=None, type=int,
                         help='GPU index to use.')
+    parser.add_argument('--no_cuda',
+                        action='store_true',
+                        help='If true, cuda is not used.')
     parser.add_argument('--multiprocessing-distributed', action='store_true',
                         help='Use multi-processing distributed training to launch '
                              'N processes per node, which has N GPUs. This is the '
@@ -82,7 +85,7 @@ def parse_configs():
     ####################################################################
     ############## Hardware configurations ############################
     ####################################################################
-    configs.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    configs.device = torch.device('cpu' if configs.no_cuda else 'cuda')
     configs.ngpus_per_node = torch.cuda.device_count()
 
     configs.pin_memory = True

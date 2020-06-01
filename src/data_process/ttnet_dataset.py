@@ -10,7 +10,8 @@ from data_process.ttnet_data_utils import load_raw_img, create_target_ball_possi
 
 
 class TTNet_Dataset(Dataset):
-    def __init__(self, events_infor, events_dict, sigma=1., input_size=(320, 128), spatial_transform=None, resize=None, nonspatial_transform=None):
+    def __init__(self, events_infor, events_dict, sigma=1., input_size=(320, 128), spatial_transform=None, resize=None,
+                 nonspatial_transform=None):
         self.events_infor = events_infor
         self.events_dict = events_dict
         self.sigma = sigma
@@ -45,7 +46,7 @@ class TTNet_Dataset(Dataset):
         if self.spatial_transform:
             origin_imgs, org_ball_pos_xy, seg_img = self.spatial_transform(origin_imgs, org_ball_pos_xy, seg_img)
         # resize
-        resized_imgs, ball_pos_global_xy, seg_img = self.resize(origin_imgs, org_ball_pos_xy, seg_img)
+        resized_imgs, global_ball_pos_xy, seg_img = self.resize(origin_imgs, org_ball_pos_xy, seg_img)
         # random brightness, normalize
         origin_imgs, *_ = self.nonspatial_transform(origin_imgs, None, None)
         resized_imgs, *_ = self.nonspatial_transform(resized_imgs, None, None)
@@ -59,10 +60,10 @@ class TTNet_Dataset(Dataset):
             target_seg = target_seg / 255.
 
         # Create target for events spotting and ball position
-        target_ball_possition = create_target_ball_possition(ball_pos_global_xy, self.sigma, self.w, self.h)
+        target_ball_pos = create_target_ball_possition(global_ball_pos_xy, self.sigma, self.w, self.h)
         target_events = create_target_events_spotting(event_name, self.events_dict)
 
-        return origin_imgs, resized_imgs, target_ball_possition, target_events, target_seg, ball_pos_global_xy, event_name
+        return origin_imgs, resized_imgs, target_ball_pos, target_events, target_seg, org_ball_pos_xy, global_ball_pos_xy
 
 
 if __name__ == '__main__':

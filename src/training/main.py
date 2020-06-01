@@ -62,6 +62,7 @@ def main_worker(gpu_idx, configs):
 
     if configs.gpu_idx is not None:
         print("Use GPU: {} for training".format(configs.gpu_idx))
+        configs.device = torch.device('cuda:{}'.format(configs.gpu_idx))
 
     if configs.distributed:
         if configs.dist_url == "env://" and configs.rank == -1:
@@ -75,7 +76,7 @@ def main_worker(gpu_idx, configs):
                                 world_size=configs.world_size, rank=configs.rank)
 
     configs.is_master_node = (not configs.distributed) or (
-                configs.distributed and (configs.rank % configs.ngpus_per_node == 0))
+            configs.distributed and (configs.rank % configs.ngpus_per_node == 0))
 
     if configs.is_master_node:
         logger = Logger(configs.logs_dir, configs.saved_fn)
@@ -90,7 +91,7 @@ def main_worker(gpu_idx, configs):
     # summary(model.cuda(), (27, 1024))
 
     # Data Parallel
-    model= make_data_parallel(model, configs)
+    model = make_data_parallel(model, configs)
 
     if logger is not None:
         logger.info(">>> Loading dataset & getting dataloader...")
@@ -176,8 +177,8 @@ def train_one_epoch(train_loader, model, optimizer, epoch, configs, logger):
     # switch to train mode
     model.train()
     start_time = time.time()
-    for batch_idx, (origin_imgs, aug_imgs, target_ball_position, target_events, target_seg, _, _) in enumerate(
-            tqdm(train_loader)):
+    for batch_idx, (origin_imgs, aug_imgs, target_ball_position, target_events, target_seg, org_ball_pos_xy,
+                    global_ball_pos_xy) in enumerate(tqdm(train_loader)):
         data_time.update(time.time() - start_time)
         b_size = origin_imgs.size(0)
         target_ball_position = target_ball_position.to(configs.device, non_blocking=True)
@@ -226,8 +227,8 @@ def validate_one_epoch(val_loader, model, epoch, configs, logger):
     model.eval()
     with torch.no_grad():
         start_time = time.time()
-        for batch_idx, (origin_imgs, aug_imgs, target_ball_position, target_events, target_seg, _, _) in enumerate(
-                tqdm(val_loader)):
+        for batch_idx, (origin_imgs, aug_imgs, target_ball_position, target_events, target_seg, org_ball_pos_xy,
+                        global_ball_pos_xy) in enumerate(tqdm(val_loader)):
             data_time.update(time.time() - start_time)
             b_size = origin_imgs.size(0)
             target_ball_position = target_ball_position.to(configs.device, non_blocking=True)
