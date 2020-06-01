@@ -35,7 +35,7 @@ def main():
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
 
-    if configs.gpu is not None:
+    if configs.gpu_idx is not None:
         warnings.warn('You have chosen a specific GPU. This will completely '
                       'disable data parallelism.')
 
@@ -53,20 +53,16 @@ def main():
         mp.spawn(main_worker, nprocs=configs.ngpus_per_node, args=(configs,))
     else:
         # Simply call main_worker function
-        main_worker(configs.gpu, configs)
+        main_worker(configs.gpu_idx, configs)
 
 
-def main_worker(gpu, configs):
-    logger = Logger(configs.logs_dir, configs.saved_fn)
-    logger.info('>>> Created a new logger')
-    logger.info('>>> configs: {}'.format(configs))
+def main_worker(gpu_idx, configs):
 
-    tb_writer = SummaryWriter(log_dir=os.path.join(configs.logs_dir, 'tensorboard'))
 
-    configs.gpu = gpu
+    configs.gpu_idx = gpu_idx
 
-    if configs.gpu is not None:
-        print("Use GPU: {} for training".format(configs.gpu))
+    if configs.gpu_idx is not None:
+        print("Use GPU: {} for training".format(configs.gpu_idx))
 
     if configs.distributed:
         if configs.dist_url == "env://" and configs.rank == -1:
@@ -74,11 +70,23 @@ def main_worker(gpu, configs):
         if configs.multiprocessing_distributed:
             # For multiprocessing distributed training, rank needs to be the
             # global rank among all the processes
-            configs.rank = configs.rank * configs.ngpus_per_node + gpu
+            configs.rank = configs.rank * configs.ngpus_per_node + gpu_idx
 
         dist.init_process_group(backend=configs.dist_backend, init_method=configs.dist_url,
                                 world_size=configs.world_size, rank=configs.rank)
 
+    configs.is_master_node = (not configs.distributed) or (
+                configs.distributed and (configs.rank % configs.ngpus_per_node == 0))
+
+    if configs.is_master_node:
+        logger = Logger(configs.logs_dir, configs.saved_fn)
+        logger.info('>>> Created a new logger')
+        logger.info('>>> configs: {}'.format(configs))
+
+        tb_writer = SummaryWriter(log_dir=os.path.join(configs.logs_dir, 'tensorboard'))
+    else:
+        logger = None
+        tb_writer = None
     # model
     model = get_model(configs)
     # summary(model.cuda(), (27, 1024))
@@ -88,33 +96,34 @@ def main_worker(gpu, configs):
         # For multiprocessing distributed, DistributedDataParallel constructor
         # should always set the single device scope, otherwise,
         # DistributedDataParallel will use all available devices.
-        if configs.gpu is not None:
-            torch.cuda.set_device(configs.gpu)
-            model.cuda(configs.gpu)
+        if configs.gpu_idx is not None:
+            torch.cuda.set_device(configs.gpu_idx)
+            model.cuda(configs.gpu_idx)
             # When using a single GPU per process and per
             # DistributedDataParallel, we need to divide the batch size
             # ourselves based on the total number of GPUs we have
             configs.batch_size = int(configs.batch_size / configs.ngpus_per_node)
             configs.num_workers = int((configs.num_workers + configs.ngpus_per_node - 1) / configs.ngpus_per_node)
-            model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[configs.gpu])
+            model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[configs.gpu_idx])
         else:
             model.cuda()
             # DistributedDataParallel will divide and allocate batch_size to all
             # available GPUs if device_ids are not set
             model = torch.nn.parallel.DistributedDataParallel(model)
-    elif configs.gpu is not None:
-        torch.cuda.set_device(configs.gpu)
-        model = model.cuda(configs.gpu)
+    elif configs.gpu_idx is not None:
+        torch.cuda.set_device(configs.gpu_idx)
+        model = model.cuda(configs.gpu_idx)
     elif configs.num_gpus > 1:
         # DataParallel will divide and allocate batch_size to all available GPUs
         model = torch.nn.DataParallel(model).cuda()
     else:
         pass
-
-    logger.info(">>> Loading dataset & getting dataloader...")
+    if logger is not None:
+        logger.info(">>> Loading dataset & getting dataloader...")
     # Create dataloader
     train_loader, val_loader, train_sampler = create_train_val_dataloader(configs)
-    logger.info('number of batches in train set: {}, val set: {}'.format(len(train_loader), len(val_loader)))
+    if logger is not None:
+        logger.info('number of batches in train set: {}, val set: {}'.format(len(train_loader), len(val_loader)))
 
     optimizer = get_optimizer(configs, model, is_warm_up=False)
     lr_scheduler = get_lr_scheduler(optimizer, configs)
@@ -123,11 +132,11 @@ def main_worker(gpu, configs):
     earlystop_count = 0
     for epoch in range(1, configs.train_num_epochs + 1):
         # train_loader, val_loader = get_dataloader(configs)
-        logger.info('{}'.format('*-' * 40))
-        logger.info('{} {}/{} {}'.format('=' * 35, epoch, configs.train_num_epochs, '=' * 35))
-        logger.info('{}'.format('*-' * 40))
-
-        logger.info('>>> Epoch: [{}/{}] learning rate: {}'.format(epoch, configs.train_num_epochs, lr))
+        if logger is not None:
+            logger.info('{}'.format('*-' * 40))
+            logger.info('{} {}/{} {}'.format('=' * 35, epoch, configs.train_num_epochs, '=' * 35))
+            logger.info('{}'.format('*-' * 40))
+            logger.info('>>> Epoch: [{}/{}] learning rate: {}'.format(epoch, configs.train_num_epochs, lr))
 
         if configs.distributed:
             train_sampler.set_epoch(epoch)
@@ -142,12 +151,11 @@ def main_worker(gpu, configs):
             train_loss,
             val_loss,
             best_val_loss)
-
-        tb_writer.add_scalars('Loss', {'train': train_loss, 'val': val_loss}, epoch)
+        if tb_writer is not None:
+            tb_writer.add_scalars('Loss', {'train': train_loss, 'val': val_loss}, epoch)
 
         saved_state = get_saved_state(model, optimizer, epoch, configs)
-        if not configs.multiprocessing_distributed or (
-                configs.multiprocessing_distributed and configs.rank % configs.ngpus_per_node == 0):
+        if configs.is_master_node:
             save_checkpoint(configs.checkpoints_dir, configs.saved_fn, saved_state, is_best=is_best, logger=None)
 
         # Adjust learning rate
@@ -160,16 +168,17 @@ def main_worker(gpu, configs):
             earlystop_count = 0 if is_best else (earlystop_count + 1)
             print_string += ' |||\t earlystop_count: {}'.format(earlystop_count)
 
-        logger.info(print_string)
-
         if configs.train_earlystop_patience:
             if configs.train_earlystop_patience <= earlystop_count:
-                logger.info('\t--- Early stopping!!!')
+                print_string += '\n\t--- Early stopping!!!'
                 break
             else:
-                logger.info('\t--- Continue training..., earlystop_count: {}'.format(earlystop_count))
+                print_string += '\n\t--- Continue training..., earlystop_count: {}'.format(earlystop_count)
 
-    tb_writer.close()
+        if logger is not None:
+            logger.info(print_string)
+    if tb_writer is not None:
+        tb_writer.close()
     cleanup()
 
 
