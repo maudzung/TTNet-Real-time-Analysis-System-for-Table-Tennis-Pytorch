@@ -19,6 +19,7 @@ sys.path.append('../')
 from data_process.ttnet_dataloader import create_train_val_dataloader, create_test_dataloader
 from training.train_utils import get_model, get_optimizer, get_lr_scheduler, get_saved_state, get_metrics, \
     write_sumup_results
+from training.train_utils import make_data_parallel
 from utils.misc import AverageMeter, save_checkpoint, ProgressMeter
 from utils.logger import Logger
 from config.config import parse_configs
@@ -57,8 +58,6 @@ def main():
 
 
 def main_worker(gpu_idx, configs):
-
-
     configs.gpu_idx = gpu_idx
 
     if configs.gpu_idx is not None:
@@ -82,7 +81,6 @@ def main_worker(gpu_idx, configs):
         logger = Logger(configs.logs_dir, configs.saved_fn)
         logger.info('>>> Created a new logger')
         logger.info('>>> configs: {}'.format(configs))
-
         tb_writer = SummaryWriter(log_dir=os.path.join(configs.logs_dir, 'tensorboard'))
     else:
         logger = None
@@ -92,30 +90,7 @@ def main_worker(gpu_idx, configs):
     # summary(model.cuda(), (27, 1024))
 
     # Data Parallel
-    if configs.distributed:
-        # For multiprocessing distributed, DistributedDataParallel constructor
-        # should always set the single device scope, otherwise,
-        # DistributedDataParallel will use all available devices.
-        if configs.gpu_idx is not None:
-            torch.cuda.set_device(configs.gpu_idx)
-            model.cuda(configs.gpu_idx)
-            # When using a single GPU per process and per
-            # DistributedDataParallel, we need to divide the batch size
-            # ourselves based on the total number of GPUs we have
-            configs.batch_size = int(configs.batch_size / configs.ngpus_per_node)
-            configs.num_workers = int((configs.num_workers + configs.ngpus_per_node - 1) / configs.ngpus_per_node)
-            model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[configs.gpu_idx])
-        else:
-            model.cuda()
-            # DistributedDataParallel will divide and allocate batch_size to all
-            # available GPUs if device_ids are not set
-            model = torch.nn.parallel.DistributedDataParallel(model)
-    elif configs.gpu_idx is not None:
-        torch.cuda.set_device(configs.gpu_idx)
-        model = model.cuda(configs.gpu_idx)
-    else:
-        # DataParallel will divide and allocate batch_size to all available GPUs
-        model = torch.nn.DataParallel(model).cuda()
+    model= make_data_parallel(model, configs.distributed, configs.gpu_idx)
 
     if logger is not None:
         logger.info(">>> Loading dataset & getting dataloader...")

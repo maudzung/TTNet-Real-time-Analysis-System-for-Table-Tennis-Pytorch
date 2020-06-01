@@ -37,6 +37,35 @@ def get_model(configs):
     return model
 
 
+def make_data_parallel(model, is_distributed, gpu_idx):
+    if is_distributed:
+        # For multiprocessing distributed, DistributedDataParallel constructor
+        # should always set the single device scope, otherwise,
+        # DistributedDataParallel will use all available devices.
+        if configs.gpu_idx is not None:
+            torch.cuda.set_device(configs.gpu_idx)
+            model.cuda(configs.gpu_idx)
+            # When using a single GPU per process and per
+            # DistributedDataParallel, we need to divide the batch size
+            # ourselves based on the total number of GPUs we have
+            configs.batch_size = int(configs.batch_size / configs.ngpus_per_node)
+            configs.num_workers = int((configs.num_workers + configs.ngpus_per_node - 1) / configs.ngpus_per_node)
+            model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[configs.gpu_idx])
+        else:
+            model.cuda()
+            # DistributedDataParallel will divide and allocate batch_size to all
+            # available GPUs if device_ids are not set
+            model = torch.nn.parallel.DistributedDataParallel(model)
+    elif gpu_idx is not None:
+        torch.cuda.set_device(configs.gpu_idx)
+        model = model.cuda(configs.gpu_idx)
+    else:
+        # DataParallel will divide and allocate batch_size to all available GPUs
+        model = torch.nn.DataParallel(model).cuda()
+
+    return model
+
+
 def get_optimizer(configs, model, is_warm_up):
     """
     Initialize optimizer for training process
