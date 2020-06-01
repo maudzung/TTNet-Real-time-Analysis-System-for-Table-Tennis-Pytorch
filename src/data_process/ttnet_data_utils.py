@@ -8,6 +8,7 @@ import numpy as np
 
 from collections import Counter
 
+
 def load_raw_img(img_path):
     """
     Load raw image
@@ -23,16 +24,18 @@ def gaussian_1d(pos, muy, sigma):
     return target
 
 
-def create_target_ball_possition(ball_position_xy, sigma=1., w=320., h=128.):
+def create_target_ball_possition(ball_position_xy, sigma=1., w=320., h=128., thresh_mask=0.01):
     target_ball_position = np.zeros((int(w + h),))
-    # For x
-    x_pos = np.arange(0, w)
-    target_ball_position[:w] = gaussian_1d(x_pos, ball_position_xy[0], sigma=sigma)
-    # For y
-    y_pos = np.arange(0, h)
-    target_ball_position[w:] = gaussian_1d(y_pos, ball_position_xy[1], sigma=sigma)
+    # Only do the next step if the ball is existed
+    if (ball_position_xy[0] > 0) and (ball_position_xy[1] > 0):
+        # For x
+        x_pos = np.arange(0, w)
+        target_ball_position[:w] = gaussian_1d(x_pos, ball_position_xy[0], sigma=sigma)
+        # For y
+        y_pos = np.arange(0, h)
+        target_ball_position[w:] = gaussian_1d(y_pos, ball_position_xy[1], sigma=sigma)
 
-    target_ball_position[target_ball_position < 1e-3] = 0.
+        target_ball_position[target_ball_position < thresh_mask] = 0.
 
     return target_ball_position
 
