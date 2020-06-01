@@ -90,7 +90,7 @@ def main_worker(gpu_idx, configs):
     # summary(model.cuda(), (27, 1024))
 
     # Data Parallel
-    model= make_data_parallel(model, configs.distributed, configs.gpu_idx)
+    model= make_data_parallel(model, configs)
 
     if logger is not None:
         logger.info(">>> Loading dataset & getting dataloader...")

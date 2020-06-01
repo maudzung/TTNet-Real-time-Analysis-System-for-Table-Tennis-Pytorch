@@ -37,8 +37,8 @@ def get_model(configs):
     return model
 
 
-def make_data_parallel(model, is_distributed, gpu_idx):
-    if is_distributed:
+def make_data_parallel(model, configs):
+    if configs.distributed:
         # For multiprocessing distributed, DistributedDataParallel constructor
         # should always set the single device scope, otherwise,
         # DistributedDataParallel will use all available devices.
@@ -56,7 +56,7 @@ def make_data_parallel(model, is_distributed, gpu_idx):
             # DistributedDataParallel will divide and allocate batch_size to all
             # available GPUs if device_ids are not set
             model = torch.nn.parallel.DistributedDataParallel(model)
-    elif gpu_idx is not None:
+    elif configs.gpu_idx is not None:
         torch.cuda.set_device(configs.gpu_idx)
         model = model.cuda(configs.gpu_idx)
     else:
