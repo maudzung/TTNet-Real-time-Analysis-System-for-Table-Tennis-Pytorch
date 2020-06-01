@@ -41,7 +41,7 @@ def extract_images_from_videos(video_path, out_images_dir):
 
 
 if __name__ == '__main__':
-    dataset_dir = '../../dataset'
+    dataset_dir = '../dataset'
     for dataset_type in ['training', 'test']:
         video_dir = os.path.join(dataset_dir, dataset_type, 'videos')
         out_images_dir = os.path.join(dataset_dir, dataset_type, 'images')

@@ -47,6 +47,12 @@ ${ROOT}
             ├──game_1.mp4
             ├──game_2.mp4
             ...
+├──prepare_dataset/
+        ├──download_dataset.py
+        ├──extract_all_images.py
+        ├──extract_selected_images.py
+        ├──unzip.py
+        ├──README.md
 ├──src/
     ├──config/
         ├──config.py
@@ -57,12 +63,8 @@ ${ROOT}
         ├──ttnet_dataset.py
     ├──losses/
         ├──losses.py
-    ├──models/
+    ├──models/        
         ├──TTNet.py
-    ├──prepare_dataset/
-        ├──download_dataset.py
-        ├──extract_images.py
-        ├──unzip.py
     ├──training/
         ├──main.py
         ├──train_utils.py

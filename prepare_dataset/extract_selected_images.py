@@ -59,7 +59,7 @@ def extract_images_from_videos(video_path, events_annos_path, out_images_dir):
 
 
 if __name__ == '__main__':
-    dataset_dir = '../../dataset'
+    dataset_dir = '../dataset'
     num_frames_sequence = 9  # the paper mentioned 25, but used 9 frames only
     num_frames_from_event = int((num_frames_sequence - 1) / 2)
     for dataset_type in ['training', 'test']:

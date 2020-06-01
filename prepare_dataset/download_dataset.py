@@ -10,7 +10,7 @@ def make_folder(folder_path):
 
 if __name__ == '__main__':
     # Need checksums
-    dataset_dir = '../../dataset'
+    dataset_dir = '../dataset'
     train_video_dir = os.path.join(dataset_dir, 'training', 'videos')
     train_annotation_dir = os.path.join(dataset_dir, 'training', 'annotations')
 

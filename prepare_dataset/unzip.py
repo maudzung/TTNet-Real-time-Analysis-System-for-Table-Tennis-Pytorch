@@ -3,7 +3,7 @@ from glob import glob
 from zipfile import ZipFile
 
 if __name__ == '__main__':
-    dataset_dir = '../../dataset'
+    dataset_dir = '../dataset'
     for dataset_type in ['training', 'test']:
         annos_dir = os.path.join(dataset_dir, dataset_type, 'annotations')
         zip_paths = glob(os.path.join(annos_dir, '*.zip'))
