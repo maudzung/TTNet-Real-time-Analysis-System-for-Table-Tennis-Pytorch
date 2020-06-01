@@ -204,8 +204,9 @@ def train_one_epoch(train_loader, model, optimizer, epoch, configs, logger):
         batch_time.update(time.time() - start_time)
 
         # Log message
-        if ((batch_idx + 1) % configs.print_freq) == 0:
-            logger.info(progress.get_message(batch_idx))
+        if logger is not None:
+            if ((batch_idx + 1) % configs.print_freq) == 0:
+                logger.info(progress.get_message(batch_idx))
 
         start_time = time.time()
 
@@ -245,8 +246,9 @@ def validate_one_epoch(val_loader, model, epoch, configs, logger):
             batch_time.update(time.time() - start_time)
 
             # Log message
-            if ((batch_idx + 1) % configs.print_freq) == 0:
-                logger.info(progress.get_message(batch_idx))
+            if logger is not None:
+                if ((batch_idx + 1) % configs.print_freq) == 0:
+                    logger.info(progress.get_message(batch_idx))
 
             start_time = time.time()
 
