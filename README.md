@@ -44,12 +44,12 @@ python main.py --dist-url 'tcp://127.0.0.1:29500' --dist-backend 'nccl' --multip
 _**First machine**_
 
 ```shell script
-python main.py --dist-url 'tcp://127.0.0.1:29500' --dist-backend 'nccl' --multiprocessing-distributed --world-size 2 --rank 0
+python main.py --dist-url 'tcp://IP_OF_NODE1:FREEPORT' --dist-backend 'nccl' --multiprocessing-distributed --world-size 2 --rank 0
 ```
 _**Second machine**_
 
 ```shell script
-python main.py --dist-url 'tcp://127.0.0.1:29500' --dist-backend 'nccl' --multiprocessing-distributed --world-size 2 --rank 1
+python main.py --dist-url 'tcp://IP_OF_NODE2:FREEPORT' --dist-backend 'nccl' --multiprocessing-distributed --world-size 2 --rank 1
 ```
 
 #### 2.2.2. Evaluation
