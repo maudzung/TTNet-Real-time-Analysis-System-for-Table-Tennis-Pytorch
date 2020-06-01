@@ -44,25 +44,24 @@ def main():
 
     configs.distributed = configs.world_size > 1 or configs.multiprocessing_distributed
 
-    ngpus_per_node = configs.num_gpus
     if configs.multiprocessing_distributed:
         # Since we have ngpus_per_node processes per node, the total world_size
         # needs to be adjusted accordingly
-        configs.world_size = ngpus_per_node * configs.world_size
+        configs.world_size = configs.ngpus_per_node * configs.world_size
         # Use torch.multiprocessing.spawn to launch distributed processes: the
         # main_worker process function
-        mp.spawn(main_worker, nprocs=ngpus_per_node, args=(ngpus_per_node, configs))
+        mp.spawn(main_worker, nprocs=configs.ngpus_per_node, args=(configs,))
     else:
         # Simply call main_worker function
-        main_worker(configs.gpu, ngpus_per_node, configs)
+        main_worker(configs.gpu, configs)
 
 
-def main_worker(gpu, ngpus_per_node, configs):
+def main_worker(gpu, configs):
     logger = Logger(configs.logs_dir, configs.saved_fn)
     logger.info('>>> Created a new logger')
     logger.info('>>> configs: {}'.format(configs))
 
-    writer = SummaryWriter(log_dir=os.path.join(configs.logs_dir, 'tensorboard'))
+    tb_writer = SummaryWriter(log_dir=os.path.join(configs.logs_dir, 'tensorboard'))
 
     configs.gpu = gpu
 
@@ -75,7 +74,7 @@ def main_worker(gpu, ngpus_per_node, configs):
         if configs.multiprocessing_distributed:
             # For multiprocessing distributed training, rank needs to be the
             # global rank among all the processes
-            configs.rank = configs.rank * ngpus_per_node + gpu
+            configs.rank = configs.rank * configs.ngpus_per_node + gpu
 
         dist.init_process_group(backend=configs.dist_backend, init_method=configs.dist_url,
                                 world_size=configs.world_size, rank=configs.rank)
@@ -95,8 +94,8 @@ def main_worker(gpu, ngpus_per_node, configs):
             # When using a single GPU per process and per
             # DistributedDataParallel, we need to divide the batch size
             # ourselves based on the total number of GPUs we have
-            configs.batch_size = int(configs.batch_size / ngpus_per_node)
-            configs.num_workers = int((configs.num_workers + ngpus_per_node - 1) / ngpus_per_node)
+            configs.batch_size = int(configs.batch_size / configs.ngpus_per_node)
+            configs.num_workers = int((configs.num_workers + configs.ngpus_per_node - 1) / configs.ngpus_per_node)
             model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[configs.gpu])
         else:
             model.cuda()
@@ -144,11 +143,11 @@ def main_worker(gpu, ngpus_per_node, configs):
             val_loss,
             best_val_loss)
 
-        writer.add_scalars('Loss', {'train': train_loss, 'val': val_loss}, epoch)
+        tb_writer.add_scalars('Loss', {'train': train_loss, 'val': val_loss}, epoch)
 
         saved_state = get_saved_state(model, optimizer, epoch, configs)
         if not configs.multiprocessing_distributed or (
-                configs.multiprocessing_distributed and configs.rank % ngpus_per_node == 0):
+                configs.multiprocessing_distributed and configs.rank % configs.ngpus_per_node == 0):
             save_checkpoint(configs.checkpoints_dir, configs.saved_fn, saved_state, is_best=is_best, logger=None)
 
         # Adjust learning rate
@@ -170,7 +169,7 @@ def main_worker(gpu, ngpus_per_node, configs):
             else:
                 logger.info('\t--- Continue training..., earlystop_count: {}'.format(earlystop_count))
 
-    writer.close()
+    tb_writer.close()
     cleanup()
 
 
