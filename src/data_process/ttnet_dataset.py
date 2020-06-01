@@ -47,8 +47,7 @@ class TTNet_Dataset(Dataset):
             origin_imgs, org_ball_pos_xy, seg_img = self.spatial_transform(origin_imgs, org_ball_pos_xy, seg_img)
         # resize
         resized_imgs, global_ball_pos_xy, seg_img = self.resize(origin_imgs, org_ball_pos_xy, seg_img)
-        # random brightness, normalize
-        origin_imgs, *_ = self.nonspatial_transform(origin_imgs, None, None)
+        # random brightness, normalize, only the resize images, but need to resize the input of the local stage
         resized_imgs, *_ = self.nonspatial_transform(resized_imgs, None, None)
 
         # Transpose (H, W, C) to (C, H, W) --> fit input of TTNet model
@@ -60,10 +59,10 @@ class TTNet_Dataset(Dataset):
             target_seg = target_seg / 255.
 
         # Create target for events spotting and ball position
-        target_ball_pos = create_target_ball_possition(global_ball_pos_xy, self.sigma, self.w, self.h)
+        target_ball_pos_global = create_target_ball_possition(global_ball_pos_xy, self.sigma, self.w, self.h)
         target_events = create_target_events_spotting(event_name, self.events_dict)
 
-        return origin_imgs, resized_imgs, target_ball_pos, target_events, target_seg, org_ball_pos_xy, global_ball_pos_xy
+        return origin_imgs, resized_imgs, target_ball_pos_global, target_events, target_seg, org_ball_pos_xy, global_ball_pos_xy
 
 
 if __name__ == '__main__':
