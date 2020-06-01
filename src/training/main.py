@@ -113,11 +113,10 @@ def main_worker(gpu_idx, configs):
     elif configs.gpu_idx is not None:
         torch.cuda.set_device(configs.gpu_idx)
         model = model.cuda(configs.gpu_idx)
-    elif configs.num_gpus > 1:
+    else:
         # DataParallel will divide and allocate batch_size to all available GPUs
         model = torch.nn.DataParallel(model).cuda()
-    else:
-        pass
+
     if logger is not None:
         logger.info(">>> Loading dataset & getting dataloader...")
     # Create dataloader
@@ -159,7 +158,10 @@ def main_worker(gpu_idx, configs):
             save_checkpoint(configs.checkpoints_dir, configs.saved_fn, saved_state, is_best=is_best, logger=None)
 
         # Adjust learning rate
-        lr_scheduler.step()
+        if configs.train_lr_type == 'step_lr':
+            lr_scheduler.step()
+        elif configs.train_lr_type == 'plateau':
+            lr_scheduler.step(val_loss)
         # Get next learning rate
         for param_group in optimizer.param_groups:
             lr = param_group['lr']

@@ -59,7 +59,7 @@ def get_optimizer(configs, model, is_warm_up):
         momentum = configs.train_momentum
         weight_decay = configs.train_weight_decay
         optimizer_type = configs.train_optimizer_type
-    if configs.num_gpus > 1:
+    if hasattr(model, 'module'):
         train_params = model.module.parameters()
     else:
         train_params = model.parameters()
@@ -97,15 +97,16 @@ def get_saved_state(model, optimizer, epoch, configs):
     Returns:
 
     """
+    if hasattr(model, 'module'):
+        model_state_dict = model.module.state_dict()
+    else:
+        model_state_dict = model.state_dict()
     saved_state = {
         'epoch': epoch,
         'configs': configs,
         'optimizer': copy.deepcopy(optimizer.state_dict()),
+        'state_dict': model_state_dict,
     }
-    if configs.num_gpus > 1:
-        saved_state['state_dict'] = copy.deepcopy(model.module.state_dict())
-    else:
-        saved_state['state_dict'] = copy.deepcopy(model.state_dict())
 
     return saved_state
 
