@@ -20,6 +20,12 @@ def parse_configs():
     parser.add_argument('--model_backbone', type=str, default='ttnet')
     parser.add_argument('--model_dropout_p', type=float, default=0.5)
     parser.add_argument('--multitask_learning', type=bool, default=True)
+    parser.add_argument('--no_local', action='store_true',
+                        help='If true, no local stage for ball detection.')
+    parser.add_argument('--no_event', action='store_true',
+                        help='If true, no event spotting detection.')
+    parser.add_argument('--no_seg', action='store_true',
+                        help='If true, no segmentation module.')
     ####################################################################
     ##############     Losses configs            ###################
     ####################################################################
@@ -66,8 +72,7 @@ def parse_configs():
                         help='distributed backend')
     parser.add_argument('--gpu_idx', default=None, type=int,
                         help='GPU index to use.')
-    parser.add_argument('--no_cuda',
-                        action='store_true',
+    parser.add_argument('--no_cuda', action='store_true',
                         help='If true, cuda is not used.')
     parser.add_argument('--multiprocessing-distributed', action='store_true',
                         help='Use multi-processing distributed training to launch '
@@ -111,14 +116,25 @@ def parse_configs():
     configs.num_events = 2  # Just "bounce" and "net hits"
     configs.num_frames_sequence = 9
 
+    configs.tasks = ['global', 'local', 'event', 'seg']
+    if configs.no_local:
+        if 'local' in configs.tasks:
+            configs.tasks.remove('local')
+        if 'event' in configs.tasks:
+            configs.tasks.remove('event')
+    if configs.no_event:
+        if 'event' in configs.tasks:
+            configs.tasks.remove('event')
+    if configs.no_seg:
+        if 'seg' in configs.tasks:
+            configs.tasks.remove('seg')
     ####################################################################
     ############## logs, Checkpoints, and results dir ########################
     ####################################################################
-    configs.task = 'ttnet'.format()
+    configs.saved_fn = 'ttnet'.format()
 
-    configs.checkpoints_dir = os.path.join(configs.working_dir, 'checkpoints', configs.task)
-    configs.logs_dir = os.path.join(configs.working_dir, 'logs', configs.task)
-    configs.saved_fn = configs.task
+    configs.checkpoints_dir = os.path.join(configs.working_dir, 'checkpoints', configs.saved_fn)
+    configs.logs_dir = os.path.join(configs.working_dir, 'logs', configs.saved_fn)
     configs.use_best_checkpoint = True
 
     if configs.use_best_checkpoint:
