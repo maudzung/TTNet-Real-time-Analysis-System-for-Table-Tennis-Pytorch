@@ -177,11 +177,8 @@ def train_one_epoch(train_loader, model, optimizer, epoch, configs, logger):
     origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg) in enumerate(
             tqdm(train_loader)):
         data_time.update(time.time() - start_time)
-        b_size = origin_imgs.size(0)
-        # target_ball_position = target_ball_position.to(configs.device, non_blocking=True)
-        # target_events = target_events.to(configs.device, non_blocking=True)
+        batch_size = origin_imgs.size(0)
         target_seg = target_seg.to(configs.device, non_blocking=True)
-
         resized_imgs = resized_imgs.to(configs.device, non_blocking=True).float()
         origin_imgs = origin_imgs.to(configs.device, non_blocking=True).float()
 
@@ -197,7 +194,7 @@ def train_one_epoch(train_loader, model, optimizer, epoch, configs, logger):
         total_loss.backward()
         optimizer.step()
 
-        losses.update(total_loss.item(), b_size)
+        losses.update(total_loss.item(), batch_size)
         # measure elapsed time
         batch_time.update(time.time() - start_time)
 
@@ -228,11 +225,8 @@ def validate_one_epoch(val_loader, model, epoch, configs, logger):
         origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg) in enumerate(
                 tqdm(val_loader)):
             data_time.update(time.time() - start_time)
-            b_size = origin_imgs.size(0)
-            target_ball_position = target_ball_position.to(configs.device, non_blocking=True)
-            target_events = target_events.to(configs.device, non_blocking=True)
+            batch_size = origin_imgs.size(0)
             target_seg = target_seg.to(configs.device, non_blocking=True)
-
             resized_imgs = resized_imgs.to(configs.device, non_blocking=True).float()
             origin_imgs = origin_imgs.to(configs.device, non_blocking=True).float()
             # compute output
@@ -240,7 +234,7 @@ def validate_one_epoch(val_loader, model, epoch, configs, logger):
                 origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg)
             total_loss = torch.mean(total_loss)
 
-            losses.update(total_loss.item(), b_size)
+            losses.update(total_loss.item(), batch_size)
             # measure elapsed time
             batch_time.update(time.time() - start_time)
 
