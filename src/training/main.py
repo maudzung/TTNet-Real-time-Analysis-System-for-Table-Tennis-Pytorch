@@ -177,20 +177,19 @@ def train_one_epoch(train_loader, model, optimizer, epoch, configs, logger):
     # switch to train mode
     model.train()
     start_time = time.time()
-    for batch_idx, (origin_imgs, aug_imgs, target_ball_position, target_events, target_seg, org_ball_pos_xy,
-                    global_ball_pos_xy) in enumerate(tqdm(train_loader)):
+    for batch_idx, (origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg) in enumerate(tqdm(train_loader)):
         data_time.update(time.time() - start_time)
         b_size = origin_imgs.size(0)
-        target_ball_position = target_ball_position.to(configs.device, non_blocking=True)
-        target_events = target_events.to(configs.device, non_blocking=True)
+        # target_ball_position = target_ball_position.to(configs.device, non_blocking=True)
+        # target_events = target_events.to(configs.device, non_blocking=True)
         target_seg = target_seg.to(configs.device, non_blocking=True)
 
-        aug_imgs = aug_imgs.to(configs.device, non_blocking=True).float()
+        resized_imgs = resized_imgs.to(configs.device, non_blocking=True).float()
         origin_imgs = origin_imgs.to(configs.device, non_blocking=True).float()
 
         # compute output
-        pred_ball_position_global, pred_ball_position_local, pred_events, pred_seg, total_loss, _ = model(
-            origin_imgs, aug_imgs, target_ball_position, target_events, target_seg)
+        pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy, total_loss, _ = model(
+            origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg)
         # For multiple GPU
         total_loss = torch.mean(total_loss)
 
@@ -227,19 +226,18 @@ def validate_one_epoch(val_loader, model, epoch, configs, logger):
     model.eval()
     with torch.no_grad():
         start_time = time.time()
-        for batch_idx, (origin_imgs, aug_imgs, target_ball_position, target_events, target_seg, org_ball_pos_xy,
-                        global_ball_pos_xy) in enumerate(tqdm(val_loader)):
+        for batch_idx, (origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg) in enumerate(tqdm(val_loader)):
             data_time.update(time.time() - start_time)
             b_size = origin_imgs.size(0)
             target_ball_position = target_ball_position.to(configs.device, non_blocking=True)
             target_events = target_events.to(configs.device, non_blocking=True)
             target_seg = target_seg.to(configs.device, non_blocking=True)
 
-            aug_imgs = aug_imgs.to(configs.device, non_blocking=True).float()
+            resized_imgs = resized_imgs.to(configs.device, non_blocking=True).float()
             origin_imgs = origin_imgs.to(configs.device, non_blocking=True).float()
             # compute output
-            pred_ball_position_global, pred_ball_position_local, pred_events, pred_seg, total_loss, _ = model(
-                origin_imgs, aug_imgs, target_ball_position, target_events, target_seg)
+            pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy, total_loss, _ = model(
+                origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg)
             total_loss = torch.mean(total_loss)
 
             losses.update(total_loss.item(), b_size)

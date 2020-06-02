@@ -20,19 +20,19 @@ def load_raw_img(img_path):
 
 
 def gaussian_1d(pos, muy, sigma):
-    target = (np.exp(- (((pos - muy) / sigma) ** 2) / 2)) / (sigma * np.sqrt(2 * np.pi))
+    target = (torch.exp(- (((pos - muy) / sigma) ** 2) / 2)) / (sigma * np.sqrt(2 * np.pi))
     return target
 
 
-def create_target_ball_possition(ball_position_xy, sigma=1., w=320., h=128., thresh_mask=0.01):
-    target_ball_position = np.zeros((int(w + h),))
+def create_target_ball(ball_position_xy, sigma=1., w=320., h=128., thresh_mask=0.01, device=None):
+    target_ball_position = torch.zeros((int(w + h),), device=device)
     # Only do the next step if the ball is existed
     if (ball_position_xy[0] > 0) and (ball_position_xy[1] > 0):
         # For x
-        x_pos = np.arange(0, w)
+        x_pos = torch.arange(0, w, device=device)
         target_ball_position[:w] = gaussian_1d(x_pos, ball_position_xy[0], sigma=sigma)
         # For y
-        y_pos = np.arange(0, h)
+        y_pos = torch.arange(0, h, device=device)
         target_ball_position[w:] = gaussian_1d(y_pos, ball_position_xy[1], sigma=sigma)
 
         target_ball_position[target_ball_position < thresh_mask] = 0.
@@ -40,9 +40,8 @@ def create_target_ball_possition(ball_position_xy, sigma=1., w=320., h=128., thr
     return target_ball_position
 
 
-def create_target_events_spotting(event_name, events_dict):
-    event_class = events_dict[event_name]
-    target_event = torch.zeros((2,))
+def create_target_events(event_class, device=None):
+    target_event = torch.zeros((2,), device=device)
     if event_class < 2:
         target_event[event_class] = 1.
 

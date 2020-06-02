@@ -29,10 +29,10 @@ def get_model(configs):
 
     if configs.multitask_learning == True:
         model = Multi_Task_Learning_Model(ttnet_model, num_tasks=4, num_events=2, weights_events=(1, 3), thresh_seg=0.5,
-                                          input_size=(320, 128))
+                                          input_size=(320, 128), device=configs.device)
     else:
         model = Unbalance_Loss_Model(ttnet_model, num_events=2, weights_events=(1, 3), thresh_seg=0.5,
-                                     input_size=(320, 128))
+                                     input_size=(320, 128), device=configs.device)
 
     return model
 

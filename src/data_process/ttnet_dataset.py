@@ -6,7 +6,7 @@ from torch.utils.data import Dataset
 
 sys.path.append('../')
 
-from data_process.ttnet_data_utils import load_raw_img, create_target_ball_possition, create_target_events_spotting
+from data_process.ttnet_data_utils import load_raw_img
 
 
 class TTNet_Dataset(Dataset):
@@ -28,7 +28,7 @@ class TTNet_Dataset(Dataset):
 
     def __getitem__(self, index):
         img_path_list, org_ball_pos_xy, event_name, seg_path = self.events_infor[index]
-        # event_class = self.events_dict[event_name]
+        event_class = self.events_dict[event_name]
         # print('event_name: {}'.format(event_name))
         # Load segmentation
         seg_img = load_raw_img(seg_path)
@@ -58,11 +58,8 @@ class TTNet_Dataset(Dataset):
         if target_seg.max() > 1.:
             target_seg = target_seg / 255.
 
-        # Create target for events spotting and ball position
-        target_ball_pos_global = create_target_ball_possition(global_ball_pos_xy, self.sigma, self.w, self.h)
-        target_events = create_target_events_spotting(event_name, self.events_dict)
-
-        return origin_imgs, resized_imgs, target_ball_pos_global, target_events, target_seg, org_ball_pos_xy, global_ball_pos_xy
+        return origin_imgs, resized_imgs, np.array(org_ball_pos_xy), np.array(global_ball_pos_xy), np.array(
+            event_class), target_seg
 
 
 if __name__ == '__main__':
