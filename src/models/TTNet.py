@@ -147,12 +147,17 @@ class Segmentation(nn.Module):
 
 
 class TTNet(nn.Module):
-    def __init__(self, dropout_p, input_size=(320, 128)):
+    def __init__(self, dropout_p, tasks, input_size=(320, 128)):
         super(TTNet, self).__init__()
+        self.tasks = tasks
+        self.ball_local_stage, self.events_spotting, self.segmentation = None, None, None
         self.ball_global_stage = BallDetection(dropout_p=dropout_p)
-        self.ball_local_stage = BallDetection(dropout_p=dropout_p)
-        self.events_spotting = EventsSpotting(dropout_p=dropout_p)
-        self.segmentation = Segmentation()
+        if 'local' in tasks:
+            self.ball_local_stage = BallDetection(dropout_p=dropout_p)
+        if 'event' in tasks:
+            self.events_spotting = EventsSpotting(dropout_p=dropout_p)
+        if 'seg' in tasks:
+            self.segmentation = Segmentation()
         self.w_resize = input_size[0]
         self.h_resize = input_size[1]
 
@@ -162,21 +167,24 @@ class TTNet(nn.Module):
         :param resize_batch_input: (batch_size, 27, 128, 320)
         :return:
         """
+        pred_ball_local, pred_events, pred_seg, local_ball_pos_xy = None, None, None, None
+
         # Normalize the input before compute forward propagation
         resize_batch_input = self.normalize(resize_batch_input)
         pred_ball_global, global_features, out_block2, out_block3, out_block4, out_block5 = self.ball_global_stage(
             resize_batch_input)
-
-        # Based on the prediction of the global stage, crop the original images
-        input_ball_local, local_ball_pos_xy = self.crop_original_batch(original_batch_input, resize_batch_input,
-                                                                       pred_ball_global, org_ball_pos_xy)
-        # Normalize the input before compute forward propagation
-        input_ball_local = self.normalize(input_ball_local)
-        pred_ball_local, local_features, *_ = self.ball_local_stage(input_ball_local)
-
-        pred_events = self.events_spotting(global_features, local_features)
-
-        pred_seg = self.segmentation(out_block2, out_block3, out_block4, out_block5)
+        if self.ball_local_stage is not None:
+            # Based on the prediction of the global stage, crop the original images
+            input_ball_local, local_ball_pos_xy = self.crop_original_batch(original_batch_input, resize_batch_input,
+                                                                           pred_ball_global, org_ball_pos_xy)
+            # Normalize the input before compute forward propagation
+            input_ball_local = self.normalize(input_ball_local)
+            pred_ball_local, local_features, *_ = self.ball_local_stage(input_ball_local)
+            # Only consider the events spotting if the model has the local stage for ball detection
+            if self.events_spotting is not None:
+                pred_events = self.events_spotting(global_features, local_features)
+        if self.segmentation is not None:
+            pred_seg = self.segmentation(out_block2, out_block3, out_block4, out_block5)
 
         return pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy
 
@@ -260,10 +268,19 @@ class TTNet(nn.Module):
 if __name__ == '__main__':
     from torchsummary import summary
 
-    ttnet = TTNet(dropout_p=0.5).cuda()
+    tasks = ['global', 'local', 'event', 'seg']
+    ttnet = TTNet(dropout_p=0.5, tasks=tasks).cuda()
     resize_batch_input = torch.rand((10, 27, 128, 320)).cuda()
     original_batch_input = torch.rand((10, 27, 1080, 1920)).cuda()
-    pred_ball_global, pred_ball_local, pred_eventspotting, pred_segmentation = ttnet(original_batch_input,
-                                                                                     resize_batch_input)
-    print('pred_ball_global: {}, pred_ball_local: {}'.format(pred_ball_global.size(), pred_ball_local.size()))
-    print('pred_segmentation: {}, pred_eventspotting: {}'.format(pred_segmentation.size(), pred_eventspotting.size()))
+    org_ball_pos_xy = torch.rand((10, 2)).cuda()
+    pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy = ttnet(original_batch_input,
+                                                                                     resize_batch_input,
+                                                                                     org_ball_pos_xy)
+    if pred_ball_global is not None:
+        print('pred_ball_global: {}'.format(pred_ball_global.size()))
+    if pred_ball_local is not None:
+        print('pred_ball_local: {}'.format(pred_ball_local.size()))
+    if pred_events is not None:
+        print('pred_events: {}'.format(pred_events.size()))
+    if pred_seg is not None:
+        print('pred_segmentation: {}'.format(pred_seg.size()))
