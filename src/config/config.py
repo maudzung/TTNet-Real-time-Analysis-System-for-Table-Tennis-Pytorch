@@ -46,6 +46,8 @@ def parse_configs():
 
     parser.add_argument('-pf', '--print_freq', type=int, default=10, metavar='N',
                         help='print frequency (default: 10)')
+    parser.add_argument('-chf', '--checkpoint_freq', type=int, default=3, metavar='N',
+                        help='frequency of saving checkpoints (default: 3)')
 
     ####################################################################
     ##############     Training strategy            ###################
