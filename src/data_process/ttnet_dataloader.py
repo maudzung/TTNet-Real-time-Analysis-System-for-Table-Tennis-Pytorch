@@ -26,8 +26,9 @@ def create_train_val_dataloader(configs):
     train_events_infor, val_events_infor = train_val_data_separation(configs)
 
     train_dataset = TTNet_Dataset(train_events_infor, configs.events_dict, transform=train_transform,
-                                  resize=resize_transform)
-    val_dataset = TTNet_Dataset(val_events_infor, configs.events_dict, transform=val_transform, resize=resize_transform)
+                                  resize=resize_transform, num_samples=configs.num_samples)
+    val_dataset = TTNet_Dataset(val_events_infor, configs.events_dict, transform=val_transform, resize=resize_transform,
+                                num_samples=configs.num_samples)
     if configs.distributed:
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
     else:
@@ -50,13 +51,13 @@ def create_test_dataloader(configs):
     Returns:
 
     """
-    test_transform = Compose([
-        Resize(new_size=(320, 128), p=1.0),
-        Normalize(p=1.)
-    ], p=1.)
+    test_transform = None
+    resize_transform = Resize(new_size=(320, 128), p=1.0)
+
     dataset_type = 'test'
     test_events_infor = get_events_infor(configs.train_game_list, configs, dataset_type)
-    test_dataset = TTNet_Dataset(test_events_infor, configs.events_dict, transformations=test_transform)
+    test_dataset = TTNet_Dataset(test_events_infor, configs.events_dict, transform=test_transform,
+                                 resize=resize_transform, num_samples=configs.num_samples)
 
     test_dataloader = DataLoader(test_dataset, batch_size=configs.batch_size, shuffle=False,
                                  pin_memory=configs.pin_memory, num_workers=configs.num_workers)

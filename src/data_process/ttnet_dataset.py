@@ -10,7 +10,7 @@ from data_process.ttnet_data_utils import load_raw_img
 
 
 class TTNet_Dataset(Dataset):
-    def __init__(self, events_infor, events_dict, sigma=1., input_size=(320, 128), transform=None, resize=None):
+    def __init__(self, events_infor, events_dict, sigma=1., input_size=(320, 128), transform=None, resize=None, num_samples=None):
         self.events_infor = events_infor
         self.events_dict = events_dict
         self.sigma = sigma
@@ -19,6 +19,8 @@ class TTNet_Dataset(Dataset):
         self.transform = transform
         self.resize = resize
         assert self.resize is not None, "At lease, need to resize images to input_size"
+        if num_samples is not None:
+            self.events_infor = self.events_infor[:num_samples]
 
     def __len__(self):
         return len(self.events_infor)
