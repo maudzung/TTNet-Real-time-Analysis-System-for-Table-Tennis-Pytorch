@@ -22,8 +22,8 @@ def get_model(configs):
     Returns:
 
     """
-    if configs.model_backbone == 'ttnet':
-        ttnet_model = TTNet(dropout_p=configs.model_dropout_p, tasks=configs.tasks)
+    if configs.arch == 'ttnet':
+        ttnet_model = TTNet(dropout_p=configs.dropout_p, tasks=configs.tasks)
     else:
         assert False, 'Undefined model backbone'
 
@@ -84,10 +84,10 @@ def get_optimizer(configs, model, is_warm_up):
         weight_decay = configs.train_warmup_weight_decay
         optimizer_type = configs.train_warmup_optimizer_type
     else:
-        lr = configs.train_lr
-        momentum = configs.train_momentum
-        weight_decay = configs.train_weight_decay
-        optimizer_type = configs.train_optimizer_type
+        lr = configs.lr
+        momentum = configs.momentum
+        weight_decay = configs.weight_decay
+        optimizer_type = configs.optimizer_type
     if hasattr(model, 'module'):
         train_params = model.module.parameters()
     else:
@@ -104,10 +104,10 @@ def get_optimizer(configs, model, is_warm_up):
 
 
 def get_lr_scheduler(optimizer, configs):
-    if configs.train_lr_type == 'step_lr':
-        lr_scheduler = StepLR(optimizer, step_size=configs.train_lr_step_size, gamma=configs.train_lr_factor)
-    elif configs.train_lr_type == 'plateau':
-        lr_scheduler = ReduceLROnPlateau(optimizer, factor=configs.train_lr_factor, patience=configs.train_lr_patience)
+    if configs.lr_type == 'step_lr':
+        lr_scheduler = StepLR(optimizer, step_size=configs.lr_step_size, gamma=configs.lr_factor)
+    elif configs.lr_type == 'plateau':
+        lr_scheduler = ReduceLROnPlateau(optimizer, factor=configs.lr_factor, patience=configs.lr_patience)
     else:
         raise TypeError
 
@@ -181,8 +181,8 @@ def write_sumup_results(configs, test_acc, test_micro_f1, test_macro_f1):
         row += 'test_acc,test_micro_f1,test_macro_f1\n'
         f_write_results.write(row)
 
-    row = '{},{},{},'.format(configs.model_backbone, configs.num_points, configs.min_num_points)
-    row += '{},{:.2f},'.format(configs.loss_type, configs.model_dropout_p)
+    row = '{},{},{},'.format(configs.arch, configs.num_points, configs.min_num_points)
+    row += '{},{:.2f},'.format(configs.loss_type, configs.dropout_p)
     row += 'Yes,' if configs.data_sampler else 'No,'
     row += 'Yes,' if configs.uniform else 'No,'
     row += 'Yes,' if configs.feature_transform else 'No,'

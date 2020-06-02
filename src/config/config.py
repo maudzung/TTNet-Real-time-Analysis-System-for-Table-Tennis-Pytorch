@@ -12,59 +12,75 @@ from utils.misc import make_folder
 
 def parse_configs():
     parser = argparse.ArgumentParser(description='TTNet Implementation')
-    parser.add_argument('--seed', type=int, default=2020, help='re-produce the results with seed random')
+    parser.add_argument('--seed', type=int, default=2020,
+                        help='re-produce the results with seed random')
 
     ####################################################################
     ##############     Model configs            ###################
     ####################################################################
-    parser.add_argument('--model_backbone', type=str, default='ttnet')
-    parser.add_argument('--model_dropout_p', type=float, default=0.5)
-    parser.add_argument('--multitask_learning', type=bool, default=True)
+    parser.add_argument('-a', '--arch', type=str, default='ttnet', metavar='ARCH',
+                        help='The name of the model architecture')
+    parser.add_argument('--dropout_p', type=float, default=0.5, metavar='P',
+                        help='The dropout probability of the model')
+    parser.add_argument('--multitask_learning', action='store_true',
+                        help='If true, the weights of different losses will be learnt (train).'
+                             'If false, a regular sum of different losses will be applied')
     parser.add_argument('--no_local', action='store_true',
                         help='If true, no local stage for ball detection.')
     parser.add_argument('--no_event', action='store_true',
                         help='If true, no event spotting detection.')
     parser.add_argument('--no_seg', action='store_true',
                         help='If true, no segmentation module.')
-    ####################################################################
-    ##############     Losses configs            ###################
-    ####################################################################
-    parser.add_argument('--loss_type', type=str, default='CE', help='CE Focal')
 
     ####################################################################
     ##############     Dataloader and Running configs            #######
     ####################################################################
-    parser.add_argument('--num_filepaths', type=int, default=None, help='Test with small dataset')
-    parser.add_argument('--num_workers', type=int, default=8)
-    parser.add_argument('--batch_size', type=int, default=16)
-    parser.add_argument('--data_sampler', type=bool, default=False)
+    parser.add_argument('--num_samples', type=int, default=None,
+                        help='Take a subset of the dataset to run and debug')
+    parser.add_argument('--num_workers', type=int, default=8,
+                        help='Number of threads for loading data')
+    parser.add_argument('--batch_size', type=int, default=16,
+                        help='mini-batch size (default: 16), this is the total'
+                             'batch size of all GPUs on the current node when using'
+                             'Data Parallel or Distributed Data Parallel')
 
-    parser.add_argument('--print_freq', type=int, default=10)
-    parser.add_argument('--verbose', type=bool, default=True)
+    parser.add_argument('-pf', '--print_freq', type=int, default=10, metavar='N',
+                        help='print frequency (default: 10)')
 
     ####################################################################
     ##############     Training strategy            ###################
     ####################################################################
 
-    parser.add_argument('--train_num_epochs', type=int, default=20)
-    parser.add_argument('--train_lr', type=float, default=1e-4)
-    parser.add_argument('--train_minimum_lr', type=float, default=1e-7)
-    parser.add_argument('--train_momentum', type=float, default=0.9)
-    parser.add_argument('--train_weight_decay', type=float, default=1e-6)
-    parser.add_argument('--train_optimizer_type', type=str, default='adam', help='sgd or adam')
-    parser.add_argument('--train_lr_step_size', type=int, default=20)
-    parser.add_argument('--train_lr_type', type=str, default='step_lr')
-    parser.add_argument('--train_lr_factor', type=float, default=0.5)
+    parser.add_argument('--num_epochs', type=int, default=20, metavar='N',
+                        help='number of total epochs to run')
+    parser.add_argument('--lr', type=float, default=1e-4, metavar='LR',
+                        help='initial learning rate')
+    parser.add_argument('--minimum_lr', type=float, default=1e-7, metavar='MIN_LR',
+                        help='minimum learning rate during training')
+    parser.add_argument('--momentum', type=float, default=0.9, metavar='M',
+                        help='momentum')
+    parser.add_argument('-wd', '--weight_decay', type=float, default=1e-6, metavar='WD',
+                        help='weight decay (default: 1e-6)')
+    parser.add_argument('--optimizer_type', type=str, default='adam', metavar='OPTIMIZER',
+                        help='the type of optimizer, it can be sgd or adam')
+    parser.add_argument('--lr_type', type=str, default='step_lr', metavar='SCHEDULER',
+                        help='the type of the learning rate scheduler (steplr or ReduceonPlateau)')
+    parser.add_argument('--lr_factor', type=float, default=0.5, metavar='FACTOR',
+                        help='reduce the learning rate with this factor')
+    parser.add_argument('--lr_step_size', type=int, default=20, metavar='STEP_SIZE',
+                        help='step_size of the learning rate when using steplr scheduler')
 
-    parser.add_argument('--train_lr_patience', type=int, default=3)
-    parser.add_argument('--train_earlystop_patience', type=int, default=12)
+    parser.add_argument('--lr_patience', type=int, default=3, metavar='N',
+                        help='patience of the learning rate when using ReduceoPlateau scheduler')
+    parser.add_argument('--earlystop_patience', type=int, default=12, metavar='N',
+                        help='Early stopping the training process if performance is not improved within this value')
 
     ####################################################################
     ##############     Distributed Data Parallel            ############
     ####################################################################
-    parser.add_argument('--world-size', default=-1, type=int,
+    parser.add_argument('--world-size', default=-1, type=int, metavar='N',
                         help='number of nodes for distributed training')
-    parser.add_argument('--rank', default=-1, type=int,
+    parser.add_argument('--rank', default=-1, type=int, metavar='N',
                         help='node rank for distributed training')
     parser.add_argument('--dist-url', default='tcp://127.0.0.1:29500', type=str,
                         help='url used to set up distributed training')
@@ -82,8 +98,12 @@ def parse_configs():
     ####################################################################
     ##############     Evaluation configurations     ###################
     ####################################################################
-    parser.add_argument('--is_test_during_training', type=bool, default=True)
-    parser.add_argument('--use_best_checkpoint', type=bool, default=True)
+    parser.add_argument('--evaluate', action='store_true',
+                        help='only evaluate the model, not training')
+    parser.add_argument('--resume_path', type=str, default=None, metavar='PATH',
+                        help='the path of the resumed checkpoint')
+    parser.add_argument('--use_best_checkpoint', action='store_true',
+                        help='If true, choose the best model on val set, otherwise choose the last model')
 
     configs = edict(vars(parser.parse_args()))
 

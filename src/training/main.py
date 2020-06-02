@@ -1,4 +1,3 @@
-import argparse
 import time
 import numpy as np
 import sys
@@ -17,9 +16,8 @@ from tqdm import tqdm
 sys.path.append('../')
 
 from data_process.ttnet_dataloader import create_train_val_dataloader, create_test_dataloader
-from training.train_utils import get_model, get_optimizer, get_lr_scheduler, get_saved_state, get_metrics, \
-    write_sumup_results
-from training.train_utils import make_data_parallel
+from training.train_utils import get_model, get_optimizer, get_lr_scheduler, get_saved_state, get_metrics
+from training.train_utils import make_data_parallel, write_sumup_results
 from utils.misc import AverageMeter, save_checkpoint, ProgressMeter
 from utils.logger import Logger
 from config.config import parse_configs
@@ -103,15 +101,15 @@ def main_worker(gpu_idx, configs):
     optimizer = get_optimizer(configs, model, is_warm_up=False)
     lr_scheduler = get_lr_scheduler(optimizer, configs)
     best_val_loss = np.inf
-    lr = configs.train_lr
+    lr = configs.lr
     earlystop_count = 0
-    for epoch in range(1, configs.train_num_epochs + 1):
+    for epoch in range(1, configs.num_epochs + 1):
         # train_loader, val_loader = get_dataloader(configs)
         if logger is not None:
             logger.info('{}'.format('*-' * 40))
-            logger.info('{} {}/{} {}'.format('=' * 35, epoch, configs.train_num_epochs, '=' * 35))
+            logger.info('{} {}/{} {}'.format('=' * 35, epoch, configs.num_epochs, '=' * 35))
             logger.info('{}'.format('*-' * 40))
-            logger.info('>>> Epoch: [{}/{}] learning rate: {}'.format(epoch, configs.train_num_epochs, lr))
+            logger.info('>>> Epoch: [{}/{}] learning rate: {}'.format(epoch, configs.num_epochs, lr))
 
         if configs.distributed:
             train_sampler.set_epoch(epoch)
@@ -134,20 +132,18 @@ def main_worker(gpu_idx, configs):
             save_checkpoint(configs.checkpoints_dir, configs.saved_fn, saved_state, is_best=is_best, logger=None)
 
         # Adjust learning rate
-        if configs.train_lr_type == 'step_lr':
+        if configs.lr_type == 'step_lr':
             lr_scheduler.step()
-        elif configs.train_lr_type == 'plateau':
+        elif configs.lr_type == 'plateau':
             lr_scheduler.step(val_loss)
         # Get next learning rate
         for param_group in optimizer.param_groups:
             lr = param_group['lr']
 
-        if configs.train_earlystop_patience:
+        if configs.earlystop_patience:
             earlystop_count = 0 if is_best else (earlystop_count + 1)
             print_string += ' |||\t earlystop_count: {}'.format(earlystop_count)
-
-        if configs.train_earlystop_patience:
-            if configs.train_earlystop_patience <= earlystop_count:
+            if configs.earlystop_patience <= earlystop_count:
                 print_string += '\n\t--- Early stopping!!!'
                 break
             else:
@@ -177,7 +173,9 @@ def train_one_epoch(train_loader, model, optimizer, epoch, configs, logger):
     # switch to train mode
     model.train()
     start_time = time.time()
-    for batch_idx, (origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg) in enumerate(tqdm(train_loader)):
+    for batch_idx, (
+    origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg) in enumerate(
+            tqdm(train_loader)):
         data_time.update(time.time() - start_time)
         b_size = origin_imgs.size(0)
         # target_ball_position = target_ball_position.to(configs.device, non_blocking=True)
@@ -226,7 +224,9 @@ def validate_one_epoch(val_loader, model, epoch, configs, logger):
     model.eval()
     with torch.no_grad():
         start_time = time.time()
-        for batch_idx, (origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg) in enumerate(tqdm(val_loader)):
+        for batch_idx, (
+        origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg) in enumerate(
+                tqdm(val_loader)):
             data_time.update(time.time() - start_time)
             b_size = origin_imgs.size(0)
             target_ball_position = target_ball_position.to(configs.device, non_blocking=True)
