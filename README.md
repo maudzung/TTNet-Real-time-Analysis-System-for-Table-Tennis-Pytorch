@@ -18,6 +18,7 @@ An introduction of the project could be found [here (from the authors)](https://
 - [x] [Distributed Data Parallel Training](https://github.com/pytorch/examples/tree/master/distributed/ddp)
 - [x] Enable/Disable modules in the TTNet model
 - [ ] Evaluate
+- [x] TensorboardX
 
 ## 2. Getting Started
 ### Requirement
@@ -89,16 +90,26 @@ python main.py --dist-url 'tcp://IP_OF_NODE2:FREEPORT' --dist-backend 'nccl' --m
 ```
 
 #### 2.2.2. Evaluation
-   
+
+  
+#### 2.2.3. Visualizing training progress
+The Tensorboard was used to save loss values on the training set and the validation set.
+Execute the below command on the working terminal:
+```
+    cd logs/<task directory>/tensorboard/
+    tensorboard --logdir=./
+```
+
+Then open the web browser and go to: [http://localhost:6006/](http://localhost:6006/)
 
 ## Usage
 ```
-main.py [-h] [--seed SEED] [-a ARCH] [--dropout_p P]
+python main.py [-h] [--seed SEED] [-a ARCH] [--dropout_p P]
                [--multitask_learning] [--no_local] [--no_event] [--no_seg]
                [--num_samples NUM_SAMPLES] [--num_workers NUM_WORKERS]
-               [--batch_size BATCH_SIZE] [-pf N] [--num_epochs N] [--lr LR]
-               [--minimum_lr MIN_LR] [--momentum M] [-wd WD]
-               [--optimizer_type OPTIMIZER] [--lr_type SCHEDULER]
+               [--batch_size BATCH_SIZE] [-pf N] [-chf N] [--start_epoch N]
+               [--num_epochs N] [--lr LR] [--minimum_lr MIN_LR] [--momentum M]
+               [-wd WD] [--optimizer_type OPTIMIZER] [--lr_type SCHEDULER]
                [--lr_factor FACTOR] [--lr_step_size STEP_SIZE]
                [--lr_patience N] [--earlystop_patience N] [--world-size N]
                [--rank N] [--dist-url DIST_URL] [--dist-backend DIST_BACKEND]
@@ -106,6 +117,7 @@ main.py [-h] [--seed SEED] [-a ARCH] [--dropout_p P]
                [--evaluate] [--resume_path PATH] [--use_best_checkpoint]
 
 TTNet Implementation
+
 optional arguments:
   -h, --help            show this help message and exit
   --seed SEED           re-produce the results with seed random
@@ -127,6 +139,9 @@ optional arguments:
                         Parallel or Distributed Data Parallel
   -pf N, --print_freq N
                         print frequency (default: 10)
+  -chf N, --checkpoint_freq N
+                        frequency of saving checkpoints (default: 3)
+  --start_epoch N       the starting epoch
   --num_epochs N        number of total epochs to run
   --lr LR               initial learning rate
   --minimum_lr MIN_LR   minimum learning rate during training
