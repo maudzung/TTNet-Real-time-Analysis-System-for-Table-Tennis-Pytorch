@@ -84,13 +84,6 @@ def main_worker(gpu_idx, configs):
         logger = None
         tb_writer = None
 
-    if logger is not None:
-        logger.info(">>> Loading dataset & getting dataloader...")
-    # Create dataloader
-    train_loader, val_loader, train_sampler = create_train_val_dataloader(configs)
-    if logger is not None:
-        logger.info('number of batches in train set: {}, val set: {}'.format(len(train_loader), len(val_loader)))
-
     # model
     model = get_model(configs)
 
@@ -110,6 +103,13 @@ def main_worker(gpu_idx, configs):
                                                                                                    lr_scheduler,
                                                                                                    configs.gpu_idx)
         configs.start_epoch = start_epoch
+
+    if logger is not None:
+        logger.info(">>> Loading dataset & getting dataloader...")
+    # Create dataloader
+    train_loader, val_loader, train_sampler = create_train_val_dataloader(configs)
+    if logger is not None:
+        logger.info('number of batches in train set: {}, val set: {}'.format(len(train_loader), len(val_loader)))
 
     if configs.evaluate:
         val_loss = validate_one_epoch(val_loader, model, configs.start_epoch - 1, configs, logger)
