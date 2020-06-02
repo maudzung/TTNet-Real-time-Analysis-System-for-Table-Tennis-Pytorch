@@ -37,17 +37,30 @@ def get_model(configs):
     return model
 
 
-def resume_model(resume_path, arch, model):
-    print('loading checkpoint {} model'.format(resume_path))
-    checkpoint = torch.load(resume_path, map_location='cpu')
-    assert arch == checkpoint['configs'].arch
+def resume_model(resume_path, arch, model, optimizer, lr_scheduler, gpu_idx):
+    assert os.path.isfile(resume_path), "=> no checkpoint found at '{}'".format(resume_path)
+    print("=> loading checkpoint '{}'".format(resume_path))
+    if gpu_idx is None:
+        checkpoint = torch.load(resume_path, map_location='cpu')
+    else:
+        # Map model to be loaded to specified single gpu.
+        loc = 'cuda:{}'.format(gpu_idx)
+        checkpoint = torch.load(resume_path, map_location=loc)
+
+    assert arch == checkpoint['configs'].arch, "Load the different arch..."
 
     if hasattr(model, 'module'):
         model.module.load_state_dict(checkpoint['state_dict'])
     else:
         model.load_state_dict(checkpoint['state_dict'])
+    optimizer.load_state_dict(checkpoint['optimizer'])
+    lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
+    start_epoch = checkpoint['epoch'] + 1
+    best_val_loss = checkpoint['best_val_loss']
+    earlystop_count = checkpoint['earlystop_count']
+    print("=> loaded checkpoint '{}' (epoch {})".format(resume_path, checkpoint['epoch']))
 
-    return model
+    return model, optimizer, lr_scheduler, start_epoch, best_val_loss, earlystop_count
 
 
 def make_data_parallel(model, configs):
@@ -127,7 +140,7 @@ def get_lr_scheduler(optimizer, configs):
     return lr_scheduler
 
 
-def get_saved_state(model, optimizer, lr_scheduler, epoch, configs):
+def get_saved_state(model, optimizer, lr_scheduler, epoch, configs, best_val_loss, earlystop_count):
     """
     Get the information to save with checkpoints
     Args:
@@ -149,6 +162,8 @@ def get_saved_state(model, optimizer, lr_scheduler, epoch, configs):
         'optimizer': copy.deepcopy(optimizer.state_dict()),
         'lr_scheduler': lr_scheduler.state_dict(),
         'state_dict': model_state_dict,
+        'best_val_loss': best_val_loss,
+        'earlystop_count': earlystop_count,
     }
 
     return saved_state

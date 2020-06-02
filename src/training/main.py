@@ -84,14 +84,6 @@ def main_worker(gpu_idx, configs):
     else:
         logger = None
         tb_writer = None
-    # model
-    model = get_model(configs)
-
-    if configs.resume_path is not None:
-        model = resume_model(configs.resume_path, configs.arch, model)
-
-    # Data Parallel
-    model = make_data_parallel(model, configs)
 
     if logger is not None:
         logger.info(">>> Loading dataset & getting dataloader...")
@@ -100,13 +92,30 @@ def main_worker(gpu_idx, configs):
     if logger is not None:
         logger.info('number of batches in train set: {}, val set: {}'.format(len(train_loader), len(val_loader)))
 
+    # model
+    model = get_model(configs)
+
+    # Data Parallel
+    model = make_data_parallel(model, configs)
+
     optimizer = get_optimizer(configs, model, is_warm_up=False)
     lr_scheduler = get_lr_scheduler(optimizer, configs)
     best_val_loss = np.inf
-    lr = configs.lr
     earlystop_count = 0
-    for epoch in range(1, configs.num_epochs + 1):
-        # train_loader, val_loader = get_dataloader(configs)
+
+    # optionally resume from a checkpoint
+    if configs.resume_path is not None:
+        model, optimizer, lr_scheduler, start_epoch, best_val_loss, earlystop_count = resume_model(configs.resume_path,
+                                                                                                   configs.arch, model,
+                                                                                                   optimizer,
+                                                                                                   lr_scheduler,
+                                                                                                   configs.gpu_idx)
+        configs.start_epoch = start_epoch
+
+    for epoch in range(configs.start_epoch, configs.num_epochs + 1):
+        # Get the current learning rate
+        for param_group in optimizer.param_groups:
+            lr = param_group['lr']
         if logger is not None:
             logger.info('{}'.format('*-' * 40))
             logger.info('{} {}/{} {}'.format('=' * 35, epoch, configs.num_epochs, '=' * 35))
@@ -130,7 +139,8 @@ def main_worker(gpu_idx, configs):
             tb_writer.add_scalars('Loss', {'train': train_loss, 'val': val_loss}, epoch)
 
         if configs.is_master_node and (is_best or ((epoch % configs.checkpoint_freq) == 0)):
-            saved_state = get_saved_state(model, optimizer, lr_scheduler, epoch, configs)
+            saved_state = get_saved_state(model, optimizer, lr_scheduler, epoch, configs, best_val_loss,
+                                          earlystop_count)
             save_checkpoint(configs.checkpoints_dir, configs.saved_fn, saved_state, is_best, epoch)
 
         # Adjust learning rate
@@ -138,9 +148,6 @@ def main_worker(gpu_idx, configs):
             lr_scheduler.step()
         elif configs.lr_type == 'plateau':
             lr_scheduler.step(val_loss)
-        # Get next learning rate
-        for param_group in optimizer.param_groups:
-            lr = param_group['lr']
 
         if configs.earlystop_patience:
             earlystop_count = 0 if is_best else (earlystop_count + 1)
