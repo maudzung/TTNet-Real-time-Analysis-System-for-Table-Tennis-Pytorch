@@ -111,6 +111,11 @@ def main_worker(gpu_idx, configs):
                                                                                                    configs.gpu_idx)
         configs.start_epoch = start_epoch
 
+    if configs.evaluate:
+        val_loss = validate_one_epoch(val_loader, model, configs.start_epoch - 1, configs, logger)
+        print('Evaluate, val_loss: {}'.format(val_loss))
+        return
+
     for epoch in range(configs.start_epoch, configs.num_epochs + 1):
         # Get the current learning rate
         for param_group in optimizer.param_groups:
