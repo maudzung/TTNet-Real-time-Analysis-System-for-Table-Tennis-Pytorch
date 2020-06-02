@@ -1,7 +1,10 @@
 # TTNet-Pytorch
+
 The implementation for the paper "TTNet: Real-time temporal and spatial video analysis of table tennis" <br>
 An introduction of the project could be found [here (from the authors)](https://medium.com/@osai.ai/osai-empowered-russian-table-tennis-championship-with-cv-and-ai-analytics-e7d52a6d8a5c)
+
 ---
+
 ## Demo
 
 ![demo](./docs/demo.gif)
@@ -13,6 +16,7 @@ An introduction of the project could be found [here (from the authors)](https://
 - [x] Semantic Segmentation (Human, table, and scoreboard)
 - [x] [Multi-Task learning](https://arxiv.org/pdf/1705.07115.pdf)
 - [x] [Distributed Data Parallel Training](https://github.com/pytorch/examples/tree/master/distributed/ddp)
+- [x] Enable/Disable modules in the TTNet model
 - [ ] Evaluate
 
 ## 2. Getting Started
@@ -30,6 +34,28 @@ cd src/training/
 
 ```shell script
 python main.py --gpu_idx 0
+```
+
+By default (as the above command), there are 4 modules in the TTNet model: *global stage, local stage, event spotting, segmentation*.
+You can disable one of the modules, except the global stage module.<br>
+An important note is if you disable the local stage module, the event spotting module will be also disabled.
+
+An example you can run to disable the _**segmentation stage**_:
+
+```shell script
+python main.py --gpu_idx 0 --no_seg
+```
+
+An example you can run to disable the _**event spotting module**_:
+
+```shell script
+python main.py --gpu_idx 0 --no_event
+```
+
+An example you can run to disable the _**local stage, event spotting, segmentation modules**_:
+
+```shell script
+python main.py --gpu_idx 0 --no_local --no_seg --no_event
 ```
 
 ##### 2.2.1.2. Multi-processing Distributed Data Parallel Training
