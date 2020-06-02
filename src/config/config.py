@@ -39,7 +39,7 @@ def parse_configs():
                         help='Take a subset of the dataset to run and debug')
     parser.add_argument('--num_workers', type=int, default=8,
                         help='Number of threads for loading data')
-    parser.add_argument('--batch_size', type=int, default=16,
+    parser.add_argument('--batch_size', type=int, default=32,
                         help='mini-batch size (default: 16), this is the total'
                              'batch size of all GPUs on the current node when using'
                              'Data Parallel or Distributed Data Parallel')
@@ -51,9 +51,9 @@ def parse_configs():
     ##############     Training strategy            ###################
     ####################################################################
 
-    parser.add_argument('--num_epochs', type=int, default=20, metavar='N',
+    parser.add_argument('--num_epochs', type=int, default=40, metavar='N',
                         help='number of total epochs to run')
-    parser.add_argument('--lr', type=float, default=1e-4, metavar='LR',
+    parser.add_argument('--lr', type=float, default=1e-3, metavar='LR',
                         help='initial learning rate')
     parser.add_argument('--minimum_lr', type=float, default=1e-7, metavar='MIN_LR',
                         help='minimum learning rate during training')
@@ -63,13 +63,12 @@ def parse_configs():
                         help='weight decay (default: 1e-6)')
     parser.add_argument('--optimizer_type', type=str, default='adam', metavar='OPTIMIZER',
                         help='the type of optimizer, it can be sgd or adam')
-    parser.add_argument('--lr_type', type=str, default='step_lr', metavar='SCHEDULER',
+    parser.add_argument('--lr_type', type=str, default='plateau', metavar='SCHEDULER',
                         help='the type of the learning rate scheduler (steplr or ReduceonPlateau)')
     parser.add_argument('--lr_factor', type=float, default=0.5, metavar='FACTOR',
                         help='reduce the learning rate with this factor')
-    parser.add_argument('--lr_step_size', type=int, default=20, metavar='STEP_SIZE',
+    parser.add_argument('--lr_step_size', type=int, default=5, metavar='STEP_SIZE',
                         help='step_size of the learning rate when using steplr scheduler')
-
     parser.add_argument('--lr_patience', type=int, default=3, metavar='N',
                         help='patience of the learning rate when using ReduceoPlateau scheduler')
     parser.add_argument('--earlystop_patience', type=int, default=12, metavar='N',
