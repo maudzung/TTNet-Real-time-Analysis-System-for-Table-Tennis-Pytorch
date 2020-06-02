@@ -38,13 +38,11 @@ class Events_Spotting_Loss(nn.Module):
 
 
 class DICE_Smotth_Loss(nn.Module):
-    def __init__(self, thresh_seg=0.5, epsilon=1e-9):
+    def __init__(self, epsilon=1e-9):
         super(DICE_Smotth_Loss, self).__init__()
-        self.thresh_seg = thresh_seg
         self.epsilon = epsilon
 
     def forward(self, pred_seg, target_seg):
-        pred_seg = pred_seg >= self.thresh_seg
         union = pred_seg * target_seg
         loss_dice_smooth = (torch.sum(2 * union, dim=(1, 2, 3)) + self.epsilon) / (
                 torch.sum(pred_seg, dim=(1, 2, 3)) + torch.sum(target_seg, dim=(1, 2, 3)) + self.epsilon)
@@ -53,10 +51,10 @@ class DICE_Smotth_Loss(nn.Module):
 
 
 class Segmentation_Loss(nn.Module):
-    def __init__(self, thresh_seg=0.5):
+    def __init__(self):
         super(Segmentation_Loss, self).__init__()
         self.bce_criterion = torch.nn.BCELoss(reduction='none')  # Keep the size
-        self.dice_criterion = DICE_Smotth_Loss(thresh_seg=thresh_seg, epsilon=1e-9)
+        self.dice_criterion = DICE_Smotth_Loss(epsilon=1e-9)
 
     def forward(self, pred_seg, target_seg):
         target_seg = target_seg.float()

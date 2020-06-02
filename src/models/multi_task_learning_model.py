@@ -16,7 +16,7 @@ class Multi_Task_Learning_Model(nn.Module):
     refer code: https://github.com/Hui-Li/multi-task-learning-example-PyTorch
     """
 
-    def __init__(self, model, num_tasks=4, num_events=2, weights_events=(1, 3), thresh_seg=0.5, input_size=(320, 128), device=None):
+    def __init__(self, model, num_tasks=4, num_events=2, weights_events=(1, 3), input_size=(320, 128), device=None):
         super(Multi_Task_Learning_Model, self).__init__()
         self.model = model
         self.num_tasks = num_tasks
@@ -25,7 +25,7 @@ class Multi_Task_Learning_Model(nn.Module):
         self.h = input_size[1]
         self.ball_loss_criterion = Ball_Detection_Loss(self.w, self.h)
         self.event_loss_criterion = Events_Spotting_Loss(weights=weights_events, num_events=num_events)
-        self.seg_loss_criterion = Segmentation_Loss(thresh_seg=thresh_seg)
+        self.seg_loss_criterion = Segmentation_Loss()
         self.device = device
 
     def forward(self, original_batch_input, resize_batch_input, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg):
