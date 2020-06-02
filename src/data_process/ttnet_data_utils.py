@@ -1,12 +1,14 @@
 import os
 import json
+import sys
+from collections import Counter
 
 import cv2
 from sklearn.model_selection import train_test_split
 import torch
 import numpy as np
 
-from collections import Counter
+sys.path.append('../')
 
 
 def load_raw_img(img_path):

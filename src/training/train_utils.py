@@ -3,7 +3,6 @@ import sys
 import copy
 import os
 
-from sklearn.metrics import f1_score, accuracy_score, confusion_matrix
 from torch.optim.lr_scheduler import StepLR, ReduceLROnPlateau
 
 sys.path.append('../')
@@ -39,7 +38,6 @@ def get_model(configs):
 
 def resume_model(resume_path, arch, model, optimizer, lr_scheduler, gpu_idx):
     assert os.path.isfile(resume_path), "=> no checkpoint found at '{}'".format(resume_path)
-    print("=> loading checkpoint '{}'".format(resume_path))
     if gpu_idx is None:
         checkpoint = torch.load(resume_path, map_location='cpu')
     else:

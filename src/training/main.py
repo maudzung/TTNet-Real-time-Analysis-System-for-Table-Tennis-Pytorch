@@ -7,7 +7,6 @@ import warnings
 
 import torch
 from torch.utils.tensorboard import SummaryWriter
-from torchsummary import summary
 import torch.distributed as dist
 import torch.multiprocessing as mp
 import torch.utils.data.distributed

@@ -1,5 +1,9 @@
+import sys
+
 import torch
 from torch.utils.data import DataLoader
+
+sys.path.append('../')
 
 from data_process.ttnet_dataset import TTNet_Dataset
 from data_process.ttnet_data_utils import get_events_infor, train_val_data_separation
