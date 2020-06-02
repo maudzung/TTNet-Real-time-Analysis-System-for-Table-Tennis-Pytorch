@@ -1,7 +1,10 @@
 # TTNet-Pytorch
-The implementation for the paper "TTNet: Real-time temporal and spatial video analysis of table tennis"
-
+The implementation for the paper "TTNet: Real-time temporal and spatial video analysis of table tennis" <br>
+An introduction of the project could be found [here (from the authors)](https://medium.com/@osai.ai/osai-empowered-russian-table-tennis-championship-with-cv-and-ai-analytics-e7d52a6d8a5c)
 ---
+## Demo
+
+![demo](./docs/demo.gif)
 
 ## 1. Features
 - [x] Ball detection global stage
