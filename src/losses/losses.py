@@ -31,7 +31,8 @@ class Events_Spotting_Loss(nn.Module):
 
     def forward(self, pred_events, target_events):
         self.weights = self.weights.cuda()
-        loss_event = - torch.sum(self.weights * target_events * torch.log(pred_events + self.epsilon),
+        loss_event = - torch.sum(self.weights * (target_events * torch.log(pred_events + self.epsilon) +
+                                                 (1. - target_events) * torch.log(1 - pred_events + self.epsilon)),
                                  dim=-1) / self.num_events
 
         return loss_event
