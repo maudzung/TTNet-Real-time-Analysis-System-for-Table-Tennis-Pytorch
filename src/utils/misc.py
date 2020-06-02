@@ -54,26 +54,3 @@ class ProgressMeter(object):
         num_digits = len(str(num_batches // 1))
         fmt = '{:' + str(num_digits) + 'd}'
         return '[' + fmt + '/' + fmt.format(num_batches) + ']'
-
-
-def save_checkpoint(checkpoints_dir, saved_fn, saved_state, is_best, logger=None):
-    """
-    Save checkpoint every epoch
-    Args:
-        checkpoints_dir:
-        saved_fn:
-        saved_state:
-        is_best:
-        logger:
-
-    Returns:
-
-    """
-    if is_best:
-        save_path = os.path.join(checkpoints_dir, '{}_best.pth'.format(saved_fn))
-    else:
-        save_path = os.path.join(checkpoints_dir, '{}.pth'.format(saved_fn))
-
-    torch.save(saved_state, save_path)
-    if logger:
-        logger.info('save the checkpoint at {}'.format(save_path))

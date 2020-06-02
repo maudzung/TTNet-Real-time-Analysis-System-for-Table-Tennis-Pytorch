@@ -16,9 +16,9 @@ from tqdm import tqdm
 sys.path.append('../')
 
 from data_process.ttnet_dataloader import create_train_val_dataloader, create_test_dataloader
-from training.train_utils import get_model, get_optimizer, get_lr_scheduler, get_saved_state, get_metrics
-from training.train_utils import make_data_parallel, write_sumup_results
-from utils.misc import AverageMeter, save_checkpoint, ProgressMeter
+from training.train_utils import get_model, get_optimizer, get_lr_scheduler, get_saved_state
+from training.train_utils import make_data_parallel, resume_model, save_checkpoint
+from utils.misc import AverageMeter, ProgressMeter
 from utils.logger import Logger
 from config.config import parse_configs
 
@@ -86,7 +86,9 @@ def main_worker(gpu_idx, configs):
         tb_writer = None
     # model
     model = get_model(configs)
-    # summary(model.cuda(), (27, 1024))
+
+    if configs.resume_path is not None:
+        model = resume_model(configs.resume_path, configs.arch, model)
 
     # Data Parallel
     model = make_data_parallel(model, configs)
@@ -127,9 +129,9 @@ def main_worker(gpu_idx, configs):
         if tb_writer is not None:
             tb_writer.add_scalars('Loss', {'train': train_loss, 'val': val_loss}, epoch)
 
-        saved_state = get_saved_state(model, optimizer, epoch, configs)
-        if configs.is_master_node:
-            save_checkpoint(configs.checkpoints_dir, configs.saved_fn, saved_state, is_best=is_best, logger=None)
+        if configs.is_master_node and (is_best or ((epoch % configs.checkpoint_freq) == 0)):
+            saved_state = get_saved_state(model, optimizer, lr_scheduler, epoch, configs)
+            save_checkpoint(configs.checkpoints_dir, configs.saved_fn, saved_state, is_best, epoch)
 
         # Adjust learning rate
         if configs.lr_type == 'step_lr':
@@ -174,8 +176,8 @@ def train_one_epoch(train_loader, model, optimizer, epoch, configs, logger):
     model.train()
     start_time = time.time()
     for batch_idx, (
-    origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg) in enumerate(
-            tqdm(train_loader)):
+            origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg) in enumerate(
+        tqdm(train_loader)):
         data_time.update(time.time() - start_time)
         batch_size = origin_imgs.size(0)
         target_seg = target_seg.to(configs.device, non_blocking=True)
@@ -222,8 +224,8 @@ def validate_one_epoch(val_loader, model, epoch, configs, logger):
     with torch.no_grad():
         start_time = time.time()
         for batch_idx, (
-        origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg) in enumerate(
-                tqdm(val_loader)):
+                origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg) in enumerate(
+            tqdm(val_loader)):
             data_time.update(time.time() - start_time)
             batch_size = origin_imgs.size(0)
             target_seg = target_seg.to(configs.device, non_blocking=True)

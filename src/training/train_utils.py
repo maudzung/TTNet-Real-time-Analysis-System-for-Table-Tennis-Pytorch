@@ -37,6 +37,19 @@ def get_model(configs):
     return model
 
 
+def resume_model(resume_path, arch, model):
+    print('loading checkpoint {} model'.format(resume_path))
+    checkpoint = torch.load(resume_path, map_location='cpu')
+    assert arch == checkpoint['configs'].arch
+
+    if hasattr(model, 'module'):
+        model.module.load_state_dict(checkpoint['state_dict'])
+    else:
+        model.load_state_dict(checkpoint['state_dict'])
+
+    return model
+
+
 def make_data_parallel(model, configs):
     if configs.distributed:
         # For multiprocessing distributed, DistributedDataParallel constructor
@@ -114,7 +127,7 @@ def get_lr_scheduler(optimizer, configs):
     return lr_scheduler
 
 
-def get_saved_state(model, optimizer, epoch, configs):
+def get_saved_state(model, optimizer, lr_scheduler, epoch, configs):
     """
     Get the information to save with checkpoints
     Args:
@@ -134,62 +147,23 @@ def get_saved_state(model, optimizer, epoch, configs):
         'epoch': epoch,
         'configs': configs,
         'optimizer': copy.deepcopy(optimizer.state_dict()),
+        'lr_scheduler': lr_scheduler.state_dict(),
         'state_dict': model_state_dict,
     }
 
     return saved_state
 
 
-def get_metrics(all_targets, all_preds):
+def save_checkpoint(checkpoints_dir, saved_fn, saved_state, is_best, epoch):
+    """Save checkpoint every epoch only is best model or after every checkpoint_freq epoch
     """
-    Calculate evaluation metrics during training/validate/testing phase
-    Args:
-        all_targets:
-        all_preds:
-
-    Returns:
-
-    """
-    acc = accuracy_score(all_targets, all_preds) * 100.
-    micro_f1 = f1_score(all_targets, all_preds, average='micro')
-    macro_f1 = f1_score(all_targets, all_preds, average='macro')
-    confusion_mat = confusion_matrix(y_true=all_targets, y_pred=all_preds)
-
-    return acc, micro_f1, macro_f1, confusion_mat
-
-
-def write_sumup_results(configs, test_acc, test_micro_f1, test_macro_f1):
-    """
-    Write the results on test set to a file when the training process is done.
-    Args:
-        configs:
-        test_acc:
-        test_micro_f1:
-        test_macro_f1:
-
-    Returns:
-
-    """
-    result_filepath = os.path.join(configs.results_dir, 'sumup_results.csv')
-    if os.path.isfile(result_filepath):
-        f_write_results = open(result_filepath, 'a+')
+    if is_best:
+        save_path = os.path.join(checkpoints_dir, '{}_best.pth'.format(saved_fn))
     else:
-        f_write_results = open(result_filepath, 'w')
-        row = 'model_name,num_points,min_num_points,'
-        row += 'loss_type,dropout_p,'
-        row += 'data_sampler,uniform,feature_transform,'
-        row += 'test_acc,test_micro_f1,test_macro_f1\n'
-        f_write_results.write(row)
+        save_path = os.path.join(checkpoints_dir, '{}_epoch_{}.pth'.format(saved_fn, epoch))
 
-    row = '{},{},{},'.format(configs.arch, configs.num_points, configs.min_num_points)
-    row += '{},{:.2f},'.format(configs.loss_type, configs.dropout_p)
-    row += 'Yes,' if configs.data_sampler else 'No,'
-    row += 'Yes,' if configs.uniform else 'No,'
-    row += 'Yes,' if configs.feature_transform else 'No,'
-    row += '{:.2f},{:.4f},{:.4f}\n'.format(test_acc, test_micro_f1, test_macro_f1)
-    f_write_results.write(row)
-
-    f_write_results.close()
+    torch.save(saved_state, save_path)
+    print('save a checkpoint at {}'.format(save_path))
 
 
 if __name__ == '__main__':
