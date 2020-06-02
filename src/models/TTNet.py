@@ -162,13 +162,16 @@ class TTNet(nn.Module):
         :param resize_batch_input: (batch_size, 27, 128, 320)
         :return:
         """
+        # Normalize the input before compute forward propagation
+        resize_batch_input = self.normalize(resize_batch_input)
         pred_ball_global, global_features, out_block2, out_block3, out_block4, out_block5 = self.ball_global_stage(
             resize_batch_input)
 
+        # Based on the prediction of the global stage, crop the original images
         input_ball_local, local_ball_pos_xy = self.crop_original_batch(original_batch_input, resize_batch_input,
                                                                        pred_ball_global, org_ball_pos_xy)
-        # input_ball_local = input_ball_local.cuda()
-        # Need to normalize
+        # Normalize the input before compute forward propagation
+        input_ball_local = self.normalize(input_ball_local)
         pred_ball_local, local_features, *_ = self.ball_local_stage(input_ball_local)
 
         pred_events = self.events_spotting(global_features, local_features)
@@ -176,6 +179,11 @@ class TTNet(nn.Module):
         pred_seg = self.segmentation(out_block2, out_block3, out_block4, out_block5)
 
         return pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy
+
+    def normalize(self, x, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
+        mean = torch.repeat_interleave(torch.tensor(mean).cuda().view(1, 3, 1, 1), repeats=9, dim=1)
+        std = torch.repeat_interleave(torch.tensor(std).cuda().view(1, 3, 1, 1), repeats=9, dim=1)
+        return (x / 255. - mean) / std
 
     def crop_original_batch(self, original_batch_input, resize_batch_input, pred_ball_global, org_ball_pos_xy):
         """Get input of the local stage by cropping the original images based on the ball position

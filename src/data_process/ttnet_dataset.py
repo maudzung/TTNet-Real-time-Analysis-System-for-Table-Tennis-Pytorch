@@ -10,18 +10,15 @@ from data_process.ttnet_data_utils import load_raw_img
 
 
 class TTNet_Dataset(Dataset):
-    def __init__(self, events_infor, events_dict, sigma=1., input_size=(320, 128), spatial_transform=None, resize=None,
-                 nonspatial_transform=None):
+    def __init__(self, events_infor, events_dict, sigma=1., input_size=(320, 128), transform=None, resize=None):
         self.events_infor = events_infor
         self.events_dict = events_dict
         self.sigma = sigma
         self.w = input_size[0]
         self.h = input_size[1]
-        self.spatial_transform = spatial_transform
+        self.transform = transform
         self.resize = resize
-        self.nonspatial_transform = nonspatial_transform
         assert self.resize is not None, "At lease, need to resize images to input_size"
-        assert self.nonspatial_transform is not None, "At lease, need to normalize images"
 
     def __len__(self):
         return len(self.events_infor)
@@ -43,12 +40,10 @@ class TTNet_Dataset(Dataset):
                 origin_imgs = np.concatenate((origin_imgs, img), axis=-1)
 
         # Apply augmentation
-        if self.spatial_transform:
-            origin_imgs, org_ball_pos_xy, seg_img = self.spatial_transform(origin_imgs, org_ball_pos_xy, seg_img)
-        # resize
+        if self.transform:
+            origin_imgs, org_ball_pos_xy, seg_img = self.transform(origin_imgs, org_ball_pos_xy, seg_img)
+        # resize for the global ball stage
         resized_imgs, global_ball_pos_xy, seg_img = self.resize(origin_imgs, org_ball_pos_xy, seg_img)
-        # random brightness, normalize, only the resize images, but need to resize the input of the local stage
-        resized_imgs, *_ = self.nonspatial_transform(resized_imgs, None, None)
 
         # Transpose (H, W, C) to (C, H, W) --> fit input of TTNet model
         resized_imgs = resized_imgs.transpose(2, 0, 1)
@@ -76,13 +71,13 @@ if __name__ == '__main__':
     print('len(train_events_infor): {}'.format(len(train_events_infor)))
     # Test transformation
     transform = Compose([
-        Random_Crop(max_height_reduction_percent=0.15, max_width_reduction_percent=0.15, p=1.),
+        Random_Crop(max_reduction_percent=0.15, p=1.),
         Resize(new_size=(320, 128), p=1.0),
         Random_HFlip(p=1.),
         Random_Rotate(rotation_angle_limit=15, p=1.)
     ], p=1.)
 
-    ttnet_dataset = TTNet_Dataset(train_events_infor, configs.events_dict, transformations=transform)
+    ttnet_dataset = TTNet_Dataset(train_events_infor, configs.events_dict, transform=transform)
 
     print('len(ttnet_dataset): {}'.format(len(ttnet_dataset)))
     example_index = 100
