@@ -100,12 +100,16 @@ def main_worker(gpu_idx, configs):
 
     # optionally resume from a checkpoint
     if configs.resume_path is not None:
-        model, optimizer, lr_scheduler, start_epoch, best_val_loss, earlystop_count = resume_model(configs.resume_path,
-                                                                                                   configs.arch, model,
-                                                                                                   optimizer,
-                                                                                                   lr_scheduler,
-                                                                                                   configs.gpu_idx)
-        configs.start_epoch = start_epoch
+        checkpoint = resume_model(configs.resume_path, configs.arch, configs.gpu_idx)
+        if hasattr(model, 'module'):
+            model.module.load_state_dict(checkpoint['state_dict'])
+        else:
+            model.load_state_dict(checkpoint['state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer'])
+        lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
+        best_val_loss = checkpoint['best_val_loss']
+        earlystop_count = checkpoint['earlystop_count']
+        configs.start_epoch = checkpoint['epoch'] + 1
 
     if logger is not None:
         logger.info(">>> Loading dataset & getting dataloader...")

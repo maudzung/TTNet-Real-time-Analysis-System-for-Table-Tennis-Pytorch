@@ -45,7 +45,7 @@ def get_num_parameters(model):
     return num_parameters
 
 
-def resume_model(resume_path, arch, model, optimizer, lr_scheduler, gpu_idx):
+def resume_model(resume_path, arch, gpu_idx):
     assert os.path.isfile(resume_path), "=> no checkpoint found at '{}'".format(resume_path)
     if gpu_idx is None:
         checkpoint = torch.load(resume_path, map_location='cpu')
@@ -53,21 +53,10 @@ def resume_model(resume_path, arch, model, optimizer, lr_scheduler, gpu_idx):
         # Map model to be loaded to specified single gpu.
         loc = 'cuda:{}'.format(gpu_idx)
         checkpoint = torch.load(resume_path, map_location=loc)
-
     assert arch == checkpoint['configs'].arch, "Load the different arch..."
-
-    if hasattr(model, 'module'):
-        model.module.load_state_dict(checkpoint['state_dict'])
-    else:
-        model.load_state_dict(checkpoint['state_dict'])
-    optimizer.load_state_dict(checkpoint['optimizer'])
-    lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
-    start_epoch = checkpoint['epoch'] + 1
-    best_val_loss = checkpoint['best_val_loss']
-    earlystop_count = checkpoint['earlystop_count']
     print("=> loaded checkpoint '{}' (epoch {})".format(resume_path, checkpoint['epoch']))
 
-    return model, optimizer, lr_scheduler, start_epoch, best_val_loss, earlystop_count
+    return checkpoint
 
 
 def make_data_parallel(model, configs):
