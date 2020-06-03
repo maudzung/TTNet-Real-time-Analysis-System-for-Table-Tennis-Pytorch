@@ -36,6 +36,15 @@ def get_model(configs):
     return model
 
 
+def get_num_parameters(model):
+    if hasattr(model, 'module'):
+        num_parameters = sum(p.numel() for p in model.module.parameters() if p.requires_grad)
+    else:
+        num_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+    return num_parameters
+
+
 def resume_model(resume_path, arch, model, optimizer, lr_scheduler, gpu_idx):
     assert os.path.isfile(resume_path), "=> no checkpoint found at '{}'".format(resume_path)
     if gpu_idx is None:
