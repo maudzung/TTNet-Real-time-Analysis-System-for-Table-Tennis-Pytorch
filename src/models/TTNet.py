@@ -147,7 +147,7 @@ class Segmentation(nn.Module):
 
 
 class TTNet(nn.Module):
-    def __init__(self, dropout_p, tasks, input_size=(320, 128)):
+    def __init__(self, dropout_p, tasks, input_size):
         super(TTNet, self).__init__()
         self.tasks = tasks
         self.ball_local_stage, self.events_spotting, self.segmentation = None, None, None
@@ -269,13 +269,13 @@ if __name__ == '__main__':
     from torchsummary import summary
 
     tasks = ['global', 'local', 'event', 'seg']
-    ttnet = TTNet(dropout_p=0.5, tasks=tasks).cuda()
+    ttnet = TTNet(dropout_p=0.5, tasks=tasks, input_size=(320, 128)).cuda()
     resize_batch_input = torch.rand((10, 27, 128, 320)).cuda()
     original_batch_input = torch.rand((10, 27, 1080, 1920)).cuda()
     org_ball_pos_xy = torch.rand((10, 2)).cuda()
     pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy = ttnet(original_batch_input,
-                                                                                     resize_batch_input,
-                                                                                     org_ball_pos_xy)
+                                                                                        resize_batch_input,
+                                                                                        org_ball_pos_xy)
     if pred_ball_global is not None:
         print('pred_ball_global: {}'.format(pred_ball_global.size()))
     if pred_ball_local is not None:
