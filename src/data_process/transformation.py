@@ -43,15 +43,16 @@ class Denormalize():
 
 
 class Resize(object):
-    def __init__(self, new_size, p=0.5):
+    def __init__(self, new_size, p=0.5, interpolation=cv2.INTER_CUBIC):
         self.new_size = new_size
         self.p = p
+        self.interpolation = interpolation
 
     def __call__(self, imgs, ball_position_xy, seg_img):
         if random.random() <= self.p:
             h, w, c = imgs.shape
             # Resize a sequence of images
-            imgs = cv2.resize(imgs, self.new_size)
+            imgs = cv2.resize(imgs, self.new_size, interpolation=self.interpolation)
             # Dont need to resize seg_img
             # Adjust ball position
             w_ratio = w / self.new_size[0]
@@ -62,9 +63,10 @@ class Resize(object):
 
 
 class Random_Crop(object):
-    def __init__(self, max_reduction_percent=0.15, p=0.5):
+    def __init__(self, max_reduction_percent=0.15, p=0.5, interpolation=cv2.INTER_CUBIC):
         self.max_reduction_percent = max_reduction_percent
         self.p = p
+        self.interpolation = interpolation
 
     def __call__(self, imgs, ball_position_xy, seg_img):
         # imgs are before resizing
@@ -83,15 +85,15 @@ class Random_Crop(object):
             h_ratio = h / new_h
             # crop a sequence of images
             imgs = imgs[min_y:max_y, min_x:max_x, :]
-            imgs = cv2.resize(imgs, (w, h))
+            imgs = cv2.resize(imgs, (w, h), interpolation=self.interpolation)
             # crop seg_img
             seg_img_h, seg_img_w, _ = seg_img.shape
             # 1. Resize to original
-            seg_img = cv2.resize(seg_img, (w, h))
+            seg_img = cv2.resize(seg_img, (w, h), interpolation=self.interpolation)
             # 2. Crop
             seg_img = seg_img[min_y:max_y, min_x:max_x, :]
             # 3. Resize to (128, 320, 3)
-            seg_img = cv2.resize(seg_img, (seg_img_w, seg_img_h))
+            seg_img = cv2.resize(seg_img, (seg_img_w, seg_img_h), interpolation=self.interpolation)
 
             # Adjust ball position
             ball_position_xy = [int((ball_position_xy[0] - min_x) * w_ratio),
