@@ -26,8 +26,9 @@ def gaussian_1d(pos, muy, sigma):
     return target
 
 
-def create_target_ball(ball_position_xy, sigma=1., w=320., h=128., thresh_mask=0.01, device=None):
-    target_ball_position = torch.zeros((int(w + h),), device=device)
+def create_target_ball(ball_position_xy, sigma, w, h, thresh_mask, device):
+    w, h = int(w), int(h)
+    target_ball_position = torch.zeros((w + h,), device=device)
     # Only do the next step if the ball is existed
     if (ball_position_xy[0] > 0) and (ball_position_xy[1] > 0):
         # For x
@@ -42,7 +43,7 @@ def create_target_ball(ball_position_xy, sigma=1., w=320., h=128., thresh_mask=0
     return target_ball_position
 
 
-def create_target_events(event_class, device=None):
+def create_target_events(event_class, device):
     target_event = torch.zeros((2,), device=device)
     if event_class < 2:
         target_event[event_class] = 1.
@@ -119,8 +120,21 @@ if __name__ == '__main__':
     get_events_infor(game_list, configs, dataset_type)
     train_events_infor, val_events_infor = train_val_data_separation(configs)
     event_name = 'net'
-    target_event = create_target_events_spotting(event_name, configs.events_dict)
+    event_class = configs.events_dict[event_name]
+    configs.device = torch.device('cpu')
+    target_event = create_target_events(event_class, device=configs.device)
     print(target_event)
+    ball_position_xy = np.array([100, 50])
+    target_ball_position = create_target_ball(ball_position_xy, sigma=0.5, w=320, h=128, thresh_mask=0.01,
+                                              device=configs.device)
+
+    max_val_x = (target_ball_position[:320]).max()
+    max_val_y = (target_ball_position[320:]).max()
+    target_ball_g_x = np.argmax(target_ball_position[:320])
+    target_ball_g_y = np.argmax(target_ball_position[320:])
+    print('max_val_x: {}, max_val_y: {}'.format(max_val_x, max_val_y))
+    print('target_ball_g_x: {}, target_ball_g_x: {}'.format(target_ball_g_x, target_ball_g_y))
+
     """
     num train_events_infor: 3044, train_events_labels: 3044
     num val_events_infor: 762, val_events_labels: 762
