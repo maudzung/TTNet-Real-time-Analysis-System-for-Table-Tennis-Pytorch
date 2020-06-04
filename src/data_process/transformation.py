@@ -107,21 +107,22 @@ class Random_Rotate(object):
 
     def __call__(self, imgs, ball_position_xy, seg_img):
         if random.random() <= self.p:
+            random_angle = random.uniform(-self.rotation_angle_limit, self.rotation_angle_limit)
+            # Rotate a sequence of imgs
             h, w, c = imgs.shape
             center = (int(w / 2), int(h / 2))
-
-            random_angle = random.uniform(-self.rotation_angle_limit, self.rotation_angle_limit)
-
             rotate_matrix = cv2.getRotationMatrix2D(center, random_angle, 1.)
-            # Rotate a sequence of imgs
             imgs = cv2.warpAffine(imgs, rotate_matrix, (w, h), flags=cv2.INTER_LINEAR)
-            # Rotate seg_img
-            seg_img = cv2.warpAffine(seg_img, rotate_matrix, (seg_img.shape[1], seg_img.shape[0]),
-                                     flags=cv2.INTER_LINEAR)
 
-            # Adjust ball position
+            # Adjust ball position, apply the same rotate_matrix for the sequential images
             ball_position_xy = rotate_matrix.dot(np.array([ball_position_xy[0], ball_position_xy[1], 1.]).T)
             ball_position_xy = ball_position_xy.astype(np.int)
+
+            # Rotate seg_img
+            seg_h, seg_w, seg_c = seg_img.shape
+            seg_center = (int(seg_w / 2), int(seg_h / 2))
+            seg_rotate_matrix = cv2.getRotationMatrix2D(seg_center, random_angle, 1.)
+            seg_img = cv2.warpAffine(seg_img, seg_rotate_matrix, (seg_w, seg_h), flags=cv2.INTER_LINEAR)
 
         return imgs, ball_position_xy, seg_img
 
