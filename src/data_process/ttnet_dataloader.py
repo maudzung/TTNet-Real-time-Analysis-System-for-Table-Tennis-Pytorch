@@ -25,14 +25,14 @@ def create_train_val_dataloader(configs):
         Random_Rotate(rotation_angle_limit=15, p=0.5),
     ], p=1.)
     val_transform = None
-    resize_transform = Resize(new_size=(320, 128), p=1.0)
+    resize_transform = Resize(new_size=tuple(configs.input_size), p=1.0)
 
     train_events_infor, val_events_infor = train_val_data_separation(configs)
 
-    train_dataset = TTNet_Dataset(train_events_infor, configs.events_dict, transform=train_transform,
-                                  resize=resize_transform, num_samples=configs.num_samples)
-    val_dataset = TTNet_Dataset(val_events_infor, configs.events_dict, transform=val_transform, resize=resize_transform,
-                                num_samples=configs.num_samples)
+    train_dataset = TTNet_Dataset(train_events_infor, configs.events_dict, configs.input_size,
+                                  transform=train_transform, resize=resize_transform, num_samples=configs.num_samples)
+    val_dataset = TTNet_Dataset(val_events_infor, configs.events_dict, configs.input_size, transform=val_transform,
+                                resize=resize_transform, num_samples=configs.num_samples)
     if configs.distributed:
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
     else:
