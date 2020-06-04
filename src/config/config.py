@@ -14,7 +14,8 @@ def parse_configs():
     parser = argparse.ArgumentParser(description='TTNet Implementation')
     parser.add_argument('--seed', type=int, default=2020,
                         help='re-produce the results with seed random')
-
+    parser.add_argument('--saved_fn', type=str, default='ttnet', metavar='FN',
+                        help='The name using for saving logs, models,...')
     ####################################################################
     ##############     Model configs            ###################
     ####################################################################
@@ -43,12 +44,14 @@ def parse_configs():
                         help='mini-batch size (default: 16), this is the total'
                              'batch size of all GPUs on the current node when using'
                              'Data Parallel or Distributed Data Parallel')
-
-    parser.add_argument('-pf', '--print_freq', type=int, default=10, metavar='N',
+    parser.add_argument('--print_freq', type=int, default=10, metavar='N',
                         help='print frequency (default: 10)')
-    parser.add_argument('-chf', '--checkpoint_freq', type=int, default=3, metavar='N',
+    parser.add_argument('--checkpoint_freq', type=int, default=3, metavar='N',
                         help='frequency of saving checkpoints (default: 3)')
-
+    parser.add_argument('--sigma', type=float, default=0.5, metavar='SIGMA',
+                        help='standard deviation of the 1D Gaussian for the ball position target')
+    parser.add_argument('--thresh_ball_pos_mask', type=float, default=0.01, metavar='THRESH',
+                        help='the lower thresh for the 1D Gaussian of the ball position target')
     ####################################################################
     ##############     Training strategy            ###################
     ####################################################################
@@ -133,11 +136,11 @@ def parse_configs():
         'bounce': 1.,
         'net': 3.,
     }
-
-    configs.events_weights_loss = [configs.events_weights_loss_dict['bounce'], configs.events_weights_loss_dict['net']]
-
-    configs.num_events = 2  # Just "bounce" and "net hits"
+    configs.events_weights_loss = (configs.events_weights_loss_dict['bounce'], configs.events_weights_loss_dict['net'])
+    configs.num_events = len(configs.events_weights_loss_dict)  # Just "bounce" and "net hits"
     configs.num_frames_sequence = 9
+    
+    configs.input_size = (320, 128)
 
     configs.tasks = ['global', 'local', 'event', 'seg']
     if configs.no_local:
@@ -154,8 +157,6 @@ def parse_configs():
     ####################################################################
     ############## logs, Checkpoints, and results dir ########################
     ####################################################################
-    configs.saved_fn = 'ttnet'.format()
-
     configs.checkpoints_dir = os.path.join(configs.working_dir, 'checkpoints', configs.saved_fn)
     configs.logs_dir = os.path.join(configs.working_dir, 'logs', configs.saved_fn)
     configs.use_best_checkpoint = True
