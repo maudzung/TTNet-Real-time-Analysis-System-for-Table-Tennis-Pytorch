@@ -57,7 +57,7 @@ class BCE_Loss(nn.Module):
         self.epsilon = epsilon
 
     def forward(self, pred_seg, target_seg):
-        bce_loss = torch.mean(
+        bce_loss = - torch.mean(
             target_seg * torch.log(pred_seg + self.epsilon) + (1 - target_seg) * torch.log(1 - pred_seg + self.epsilon),
             dim=(1, 2, 3))
 
