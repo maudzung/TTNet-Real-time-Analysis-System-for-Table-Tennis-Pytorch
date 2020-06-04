@@ -22,16 +22,20 @@ def get_model(configs):
 
     """
     if configs.arch == 'ttnet':
-        ttnet_model = TTNet(dropout_p=configs.dropout_p, tasks=configs.tasks)
+        ttnet_model = TTNet(dropout_p=configs.dropout_p, tasks=configs.tasks, input_size=configs.input_size)
     else:
         assert False, 'Undefined model backbone'
 
     if configs.multitask_learning == True:
-        model = Multi_Task_Learning_Model(ttnet_model, tasks=configs.tasks, num_events=2, weights_events=(1, 3),
-                                          input_size=(320, 128), device=configs.device)
+        model = Multi_Task_Learning_Model(ttnet_model, tasks=configs.tasks, num_events=configs.num_events,
+                                          weights_events=configs.events_weights_loss,
+                                          input_size=configs.input_size, sigma=configs.sigma,
+                                          thresh_ball_pos_mask=configs.thresh_ball_pos_mask, device=configs.device)
     else:
-        model = Unbalance_Loss_Model(ttnet_model, num_events=2, weights_events=(1, 3),
-                                     input_size=(320, 128), device=configs.device)
+        model = Unbalance_Loss_Model(ttnet_model, num_events=configs.num_events,
+                                     weights_events=configs.events_weights_loss, input_size=configs.input_size,
+                                     sigma=configs.sigma, thresh_ball_pos_mask=configs.thresh_ball_pos_mask,
+                                     device=configs.device)
 
     return model
 
