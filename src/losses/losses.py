@@ -51,16 +51,28 @@ class DICE_Smotth_Loss(nn.Module):
         return loss_dice_smooth
 
 
+class BCE_Loss(nn.Module):
+    def __init__(self, epsilon=1e-9):
+        super(BCE_Loss, self).__init__()
+        self.epsilon = epsilon
+
+    def forward(self, pred_seg, target_seg):
+        bce_loss = torch.mean(
+            target_seg * torch.log(pred_seg + self.epsilon) + (1 - target_seg) * torch.log(1 - pred_seg + self.epsilon),
+            dim=(1, 2, 3))
+
+        return bce_loss
+
+
 class Segmentation_Loss(nn.Module):
     def __init__(self):
         super(Segmentation_Loss, self).__init__()
-        self.bce_criterion = torch.nn.BCELoss(reduction='none')  # Keep the size
+        self.bce_criterion = BCE_Loss(epsilon=1e-9)
         self.dice_criterion = DICE_Smotth_Loss(epsilon=1e-9)
 
     def forward(self, pred_seg, target_seg):
         target_seg = target_seg.float()
         loss_bce = self.bce_criterion(pred_seg, target_seg.float())
-        loss_bce = loss_bce.mean(dim=(1, 2, 3))
         loss_dice = self.dice_criterion(pred_seg, target_seg)
         loss_seg = (1. - loss_dice) + loss_bce
 
