@@ -10,10 +10,9 @@ from data_process.ttnet_data_utils import load_raw_img
 
 
 class TTNet_Dataset(Dataset):
-    def __init__(self, events_infor, events_dict, sigma=1., input_size=(320, 128), transform=None, resize=None, num_samples=None):
+    def __init__(self, events_infor, events_dict, input_size, transform=None, resize=None, num_samples=None):
         self.events_infor = events_infor
         self.events_dict = events_dict
-        self.sigma = sigma
         self.w = input_size[0]
         self.h = input_size[1]
         self.transform = transform
@@ -74,25 +73,25 @@ if __name__ == '__main__':
     # Test transformation
     transform = Compose([
         Random_Crop(max_reduction_percent=0.15, p=1.),
-        Resize(new_size=(320, 128), p=1.0),
         Random_HFlip(p=1.),
         Random_Rotate(rotation_angle_limit=15, p=1.)
     ], p=1.)
+    resize_transform = Resize(new_size=tuple(configs.input_size), p=1.0)
 
-    ttnet_dataset = TTNet_Dataset(train_events_infor, configs.events_dict, transform=transform)
+    ttnet_dataset = TTNet_Dataset(train_events_infor, configs.events_dict, configs.input_size, transform=transform,
+                                  resize=resize_transform)
 
     print('len(ttnet_dataset): {}'.format(len(ttnet_dataset)))
     example_index = 100
-    origin_imgs, aug_imgs, target_ball_possition, target_events_spotting, seg_img, ball_position_xy, event_name = ttnet_dataset.__getitem__(
+    origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg = ttnet_dataset.__getitem__(
         example_index)
-    print('target_ball_possition.shape: {}'.format(target_ball_possition.shape))
-    print('target_events_spotting.shape: {}'.format(target_events_spotting.shape))
-    print('seg_img: {}'.format(seg_img.shape))
+
+    print('target_seg shape: {}'.format(target_seg.shape))
 
     origin_imgs = origin_imgs.transpose(1, 2, 0)
-    print('origin_imgs.shape: {}'.format(origin_imgs.shape))
+    print('origin_imgs shape: {}'.format(origin_imgs.shape))
 
-    out_images_dir = os.path.join(configs.working_dir, 'out_images')
+    out_images_dir = os.path.join(configs.working_dir, 'docs', 'out_images')
     if not os.path.isdir(out_images_dir):
         os.makedirs(out_images_dir)
 
@@ -104,22 +103,21 @@ if __name__ == '__main__':
         axes[i].imshow(img)
         axes[i].set_title('image {}'.format(i))
     fig.suptitle(
-        'Event: {}, ball_position_xy: (x= {}, y= {})'.format(event_name, ball_position_xy[0], ball_position_xy[1]),
+        'Event: {}, ball_position_xy: (x= {}, y= {})'.format(event_class, org_ball_pos_xy[0], org_ball_pos_xy[1]),
         fontsize=16)
-    plt.savefig(os.path.join(out_images_dir, 'fig_img_{}.jpg'.format(example_index)))
-    seg_img = seg_img.transpose(1, 2, 0)
-    plt.imsave(os.path.join(out_images_dir, 'seg_img_{}.jpg'.format(example_index)), seg_img)
+    plt.savefig(os.path.join(out_images_dir, 'org_all_imgs_{}.jpg'.format(example_index)))
+    target_seg = target_seg.transpose(1, 2, 0)
 
-    aug_imgs = aug_imgs.transpose(1, 2, 0)
-    aug_imgs = np.array(aug_imgs)
-    print('aug_imgs: {}'.format(aug_imgs.shape))
+    resized_imgs = resized_imgs.transpose(1, 2, 0)
+    resized_imgs = np.array(resized_imgs)
+    print('resized_imgs shape: {}'.format(resized_imgs.shape))
 
-    plt.imsave(os.path.join(out_images_dir, 'augment_seg_img_{}.jpg'.format(example_index)), seg_img)
+    plt.imsave(os.path.join(out_images_dir, 'augment_seg_img_{}.jpg'.format(example_index)), target_seg)
     for i in range(configs.num_frames_sequence):
-        img = aug_imgs[:, :, (i * 3): (i + 1) * 3]
+        img = resized_imgs[:, :, (i * 3): (i + 1) * 3]
         if (i == (configs.num_frames_sequence - 1)):
             img = cv2.resize(img, (img.shape[1], img.shape[0]))
-            ball_img = cv2.circle(img, tuple(ball_position_xy), radius=5, color=(255, 0, 0), thickness=2)
+            ball_img = cv2.circle(img, tuple(global_ball_pos_xy), radius=5, color=(255, 0, 0), thickness=2)
             ball_img = cv2.cvtColor(ball_img, cv2.COLOR_RGB2BGR)
             cv2.imwrite(os.path.join(out_images_dir, 'augment_img_{}.jpg'.format(example_index)),
                         ball_img)
@@ -127,6 +125,6 @@ if __name__ == '__main__':
         axes[i].imshow(img)
         axes[i].set_title('image {}'.format(i))
     fig.suptitle(
-        'Event: {}, ball_position_xy: (x= {}, y= {})'.format(event_name, ball_position_xy[0], ball_position_xy[1]),
+        'Event: {}, ball_position_xy: (x= {}, y= {})'.format(event_class, global_ball_pos_xy[0], global_ball_pos_xy[1]),
         fontsize=16)
-    plt.savefig(os.path.join(out_images_dir, 'augment_fig_img_{}.jpg'.format(example_index)))
+    plt.savefig(os.path.join(out_images_dir, 'augment_all_imgs_{}.jpg'.format(example_index)))
