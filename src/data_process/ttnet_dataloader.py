@@ -31,20 +31,24 @@ def create_train_val_dataloader(configs):
 
     train_dataset = TTNet_Dataset(train_events_infor, configs.events_dict, configs.input_size,
                                   transform=train_transform, resize=resize_transform, num_samples=configs.num_samples)
-    val_dataset = TTNet_Dataset(val_events_infor, configs.events_dict, configs.input_size, transform=val_transform,
-                                resize=resize_transform, num_samples=configs.num_samples)
+    if not configs.no_val:
+        val_dataset = TTNet_Dataset(val_events_infor, configs.events_dict, configs.input_size, transform=val_transform,
+                                    resize=resize_transform, num_samples=configs.num_samples)
     if configs.distributed:
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
-        val_sampler = torch.utils.data.distributed.DistributedSampler(val_dataset, shuffle=False)
+        if not configs.no_val:
+            val_sampler = torch.utils.data.distributed.DistributedSampler(val_dataset, shuffle=False)
     else:
         train_sampler = None
-        val_sampler = None
+        if not configs.no_val:
+            val_sampler = None
     train_dataloader = DataLoader(train_dataset, batch_size=configs.batch_size, shuffle=(train_sampler is None),
                                   pin_memory=configs.pin_memory, num_workers=configs.num_workers, sampler=train_sampler)
-
-    val_dataloader = DataLoader(val_dataset, batch_size=configs.batch_size, shuffle=False,
-                                pin_memory=configs.pin_memory, num_workers=configs.num_workers, sampler=val_sampler)
-
+    if not configs.no_val:
+        val_dataloader = DataLoader(val_dataset, batch_size=configs.batch_size, shuffle=False,
+                                    pin_memory=configs.pin_memory, num_workers=configs.num_workers, sampler=val_sampler)
+    else:
+        val_dataloader = None
     return train_dataloader, val_dataloader, train_sampler
 
 
