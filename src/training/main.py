@@ -180,6 +180,10 @@ def main_worker(gpu_idx, configs):
         else:
             if tb_writer is not None:
                 tb_writer.add_scalars('Loss', {'train': train_loss}, epoch)
+            if configs.is_master_node and ((epoch % configs.checkpoint_freq) == 0):
+                saved_state = get_saved_state(model, optimizer, lr_scheduler, epoch, configs, best_val_loss,
+                                              earlystop_count)
+                save_checkpoint(configs.checkpoints_dir, configs.saved_fn, saved_state, False, epoch)
 
     if tb_writer is not None:
         tb_writer.close()
