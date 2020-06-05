@@ -32,7 +32,7 @@ def get_model(configs):
                                           input_size=configs.input_size, sigma=configs.sigma,
                                           thresh_ball_pos_mask=configs.thresh_ball_pos_mask, device=configs.device)
     else:
-        model = Unbalance_Loss_Model(ttnet_model, num_events=configs.num_events,
+        model = Unbalance_Loss_Model(ttnet_model, tasks_loss_weight=configs.tasks_loss_weight,
                                      weights_events=configs.events_weights_loss, input_size=configs.input_size,
                                      sigma=configs.sigma, thresh_ball_pos_mask=configs.thresh_ball_pos_mask,
                                      device=configs.device)
