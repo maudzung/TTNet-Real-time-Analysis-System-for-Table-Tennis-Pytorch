@@ -205,8 +205,8 @@ class TTNet(nn.Module):
         b_size, _, h_original, w_original = original_batch_input.size()
         h_ratio = h_original / self.h_resize
         w_ratio = w_original / self.w_resize
-        mask = pred_ball_global > 0.01
-        pred_ball_global_mask = pred_ball_global * mask  # Make sure value is big enough
+        pred_ball_global_mask = pred_ball_global.data
+        pred_ball_global_mask[pred_ball_global_mask < 0.01] = 0.
 
         # Crop the original images
         input_ball_local = torch.zeros_like(resize_batch_input)  # same shape with resize_batch_input
