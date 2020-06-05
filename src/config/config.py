@@ -36,6 +36,10 @@ def parse_configs():
     ####################################################################
     ##############     Dataloader and Running configs            #######
     ####################################################################
+    parser.add_argument('--no-val', action='store_true',
+                        help='If true, use all data for training, no validation set')
+    parser.add_argument('--val-size', type=float, default=0.2,
+                        help='The size of validation set')
     parser.add_argument('--num_samples', type=int, default=None,
                         help='Take a subset of the dataset to run and debug')
     parser.add_argument('--num_workers', type=int, default=8,
@@ -139,7 +143,7 @@ def parse_configs():
     configs.events_weights_loss = (configs.events_weights_loss_dict['bounce'], configs.events_weights_loss_dict['net'])
     configs.num_events = len(configs.events_weights_loss_dict)  # Just "bounce" and "net hits"
     configs.num_frames_sequence = 9
-    
+
     configs.input_size = (320, 128)
 
     configs.tasks = ['global', 'local', 'event', 'seg']
