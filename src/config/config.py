@@ -86,6 +86,20 @@ def parse_configs():
                         help='Early stopping the training process if performance is not improved within this value')
 
     ####################################################################
+    ##############     Loss weight            ###################
+    ####################################################################
+    parser.add_argument('--bce_weight', type=float, default=0.5,
+                        help='The weight of BCE loss in segmentation module, the dice_loss weight = 1- bce_weight')
+    parser.add_argument('--global_weight', type=float, default=1.,
+                        help='The weight of loss of the global stage for ball detection')
+    parser.add_argument('--local_weight', type=float, default=1.,
+                        help='The weight of loss of the local stage for ball detection')
+    parser.add_argument('--event_weight', type=float, default=1.,
+                        help='The weight of loss of the event spotting module')
+    parser.add_argument('--seg_weight', type=float, default=1.,
+                        help='The weight of BCE loss in segmentation module')
+
+    ####################################################################
     ##############     Distributed Data Parallel            ############
     ####################################################################
     parser.add_argument('--world-size', default=-1, type=int, metavar='N',
@@ -158,6 +172,17 @@ def parse_configs():
     if configs.no_seg:
         if 'seg' in configs.tasks:
             configs.tasks.remove('seg')
+
+    # Compose loss weight for tasks, normalize the weights later
+    loss_weight_dict = {
+        'global': configs.global_weight,
+        'local': configs.local_weight,
+        'event': configs.event_weight,
+        'seg': configs.seg_weight
+    }
+    configs.tasks_loss_weight = []
+    for task in configs.tasks:
+        configs.tasks_loss_weight.append(loss_weight_dict[task])
     ####################################################################
     ############## logs, Checkpoints, and results dir ########################
     ####################################################################
