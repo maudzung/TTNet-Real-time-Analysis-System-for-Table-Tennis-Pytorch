@@ -1,5 +1,5 @@
 python main.py \
-  --saved_fn 'ttnet_2020_06_05_official' \
+  --saved_fn 'ttnet_official' \
   --arch 'ttnet' \
   --no-val \
   --batch_size 32 \
@@ -7,11 +7,12 @@ python main.py \
   --thresh_ball_pos_mask 0.01 \
   --start_epoch 1 \
   --num_epochs 100 \
-  --lr 0.001 \
+  --lr 0.0002 \
   --lr_type 'step_lr' \
   --lr_step_size 10 \
   --lr_factor 0.5 \
   --world-size 1 \
   --rank 0 \
   --dist-backend 'nccl' \
-  --multiprocessing-distributed
+  --multiprocessing-distributed \
+  --weight_decay 1e-6
