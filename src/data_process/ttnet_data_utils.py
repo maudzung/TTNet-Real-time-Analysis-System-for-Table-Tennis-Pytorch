@@ -31,7 +31,7 @@ def create_target_ball(ball_position_xy, sigma, w, h, thresh_mask, device):
     w, h = int(w), int(h)
     target_ball_position = torch.zeros((w + h,), device=device)
     # Only do the next step if the ball is existed
-    if (ball_position_xy[0] > 0) and (ball_position_xy[1] > 0):
+    if (w > ball_position_xy[0] > 0) and (h > ball_position_xy[1] > 0):
         # For x
         x_pos = torch.arange(0, w, device=device)
         target_ball_position[:w] = gaussian_1d(x_pos, ball_position_xy[0], sigma=sigma)
@@ -79,7 +79,6 @@ def get_events_infor(game_list, configs, dataset_type):
         json_events = open(events_annos_path)
         events_annos = json.load(json_events)
         for event_frameidx, event_name in events_annos.items():
-            events_labels.append(configs.events_dict[event_name])
             img_path_list = []
             for f_idx in range(int(event_frameidx) - num_frames_from_event,
                                int(event_frameidx) + num_frames_from_event + 1):
@@ -89,6 +88,9 @@ def get_events_infor(game_list, configs, dataset_type):
             # Get ball position for the last frame in the sequence
             ball_position_xy = ball_annos['{}'.format(last_f_idx)]
             ball_position_xy = [int(ball_position_xy['x']), int(ball_position_xy['y'])]
+            # Ignore the event without ball information
+            if (ball_position_xy[0] < 0) or (ball_position_xy[1] < 0):
+                continue
 
             # Get segmentation path for the last frame in the sequence
             seg_path = os.path.join(annos_dir, game_name, 'segmentation_masks', '{}.png'.format(last_f_idx))
@@ -97,6 +99,7 @@ def get_events_infor(game_list, configs, dataset_type):
                 seg_path)
 
             events_infor.append([img_path_list, ball_position_xy, event_name, seg_path])
+            events_labels.append(configs.events_dict[event_name])
     return events_infor, events_labels
 
 
@@ -120,9 +123,6 @@ if __name__ == '__main__':
     from config.config import parse_configs
 
     configs = parse_configs()
-    game_list = ['game_1']
-    dataset_type = 'training'
-    get_events_infor(game_list, configs, dataset_type)
     train_events_infor, val_events_infor = train_val_data_separation(configs)
     event_name = 'net'
     event_class = configs.events_dict[event_name]
