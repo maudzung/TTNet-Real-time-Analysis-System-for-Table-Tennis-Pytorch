@@ -45,6 +45,11 @@ class TTNet_Dataset(Dataset):
             origin_imgs, org_ball_pos_xy, seg_img = self.transform(origin_imgs, org_ball_pos_xy, seg_img)
         # resize for the global ball stage
         resized_imgs, global_ball_pos_xy, seg_img = self.resize(origin_imgs, org_ball_pos_xy, seg_img)
+        # If the ball position is outside of the resized image, set position to -1, -1 --> No ball (just for safety)
+        if (global_ball_pos_xy[0] >= self.w) or (global_ball_pos_xy[1] >= self.h) or (global_ball_pos_xy[0] < 0) or (
+                global_ball_pos_xy[1] < 0):
+            global_ball_pos_xy[0] = -1
+            global_ball_pos_xy[1] = -1
 
         # Transpose (H, W, C) to (C, H, W) --> fit input of TTNet model
         resized_imgs = resized_imgs.transpose(2, 0, 1)
