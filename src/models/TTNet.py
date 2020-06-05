@@ -248,10 +248,14 @@ class TTNet(nn.Module):
                 # Get the local ball position based on the crop image informaion
                 local_ball_pos_xy[idx, 0] = max(org_ball_pos_xy[idx, 0] - x_min + x_pad, -1)
                 local_ball_pos_xy[idx, 1] = max(org_ball_pos_xy[idx, 1] - y_min + y_pad, -1)
+                # If the ball is outside of the cropped image --> set position to -1, -1 --> No ball
+                if (local_ball_pos_xy[idx, 0] >= self.w_resize) or (local_ball_pos_xy[idx, 1] >= self.h_resize) or (
+                        local_ball_pos_xy[idx, 0] < 0) or (local_ball_pos_xy[idx, 1] < 0):
+                    local_ball_pos_xy[idx, 0] = -1
+                    local_ball_pos_xy[idx, 1] = -1
             else:
                 local_ball_pos_xy[idx, 0] = -1
                 local_ball_pos_xy[idx, 1] = -1
-
         return input_ball_local, local_ball_pos_xy
 
     @staticmethod
