@@ -205,8 +205,9 @@ def train_one_epoch(train_loader, model, optimizer, epoch, configs, logger):
         # compute output
         pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy, total_loss, _ = model(
             origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg)
-        # For multiple GPU
-        total_loss = torch.mean(total_loss)
+        # For torch.nn.DataParallel case
+        if (not configs.distributed) and (configs.gpu_idx is None):
+            total_loss = torch.mean(total_loss)
 
         # zero the parameter gradients
         optimizer.zero_grad()
@@ -252,7 +253,9 @@ def validate_one_epoch(val_loader, model, epoch, configs, logger):
             # compute output
             pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy, total_loss, _ = model(
                 origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg)
-            total_loss = torch.mean(total_loss)
+            # For torch.nn.DataParallel case
+            if (not configs.distributed) and (configs.gpu_idx is None):
+                total_loss = torch.mean(total_loss)
 
             losses.update(total_loss.item(), batch_size)
             # measure elapsed time

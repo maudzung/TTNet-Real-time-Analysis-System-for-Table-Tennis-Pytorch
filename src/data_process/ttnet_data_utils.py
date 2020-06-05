@@ -22,7 +22,8 @@ def load_raw_img(img_path):
 
 
 def gaussian_1d(pos, muy, sigma):
-    target = (torch.exp(- (((pos - muy) / sigma) ** 2) / 2)) / (sigma * np.sqrt(2 * np.pi))
+    target = torch.exp(- (((pos - muy) / sigma) ** 2) / 2)
+    # target = (torch.exp(- (((pos - muy) / sigma) ** 2) / 2)) / (sigma * np.sqrt(2 * np.pi))
     return target
 
 
