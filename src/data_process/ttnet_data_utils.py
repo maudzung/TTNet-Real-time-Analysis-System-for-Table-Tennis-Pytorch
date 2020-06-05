@@ -103,12 +103,16 @@ def get_events_infor(game_list, configs, dataset_type):
 def train_val_data_separation(configs):
     dataset_type = 'training'
     events_infor, events_labels = get_events_infor(configs.train_game_list, configs, dataset_type)
-    train_events_infor, val_events_infor, train_events_labels, val_events_labels = train_test_split(events_infor,
-                                                                                                    events_labels,
-                                                                                                    shuffle=True,
-                                                                                                    test_size=0.2,
-                                                                                                    random_state=configs.seed,
-                                                                                                    stratify=events_labels)
+    if configs.no_val:
+        train_events_infor = events_infor
+        val_events_infor = None
+    else:
+        train_events_infor, val_events_infor, train_events_labels, val_events_labels = train_test_split(events_infor,
+                                                                                                        events_labels,
+                                                                                                        shuffle=True,
+                                                                                                        test_size=configs.val_size,
+                                                                                                        random_state=configs.seed,
+                                                                                                        stratify=events_labels)
     return train_events_infor, val_events_infor
 
 
