@@ -116,7 +116,10 @@ def main_worker(gpu_idx, configs):
     # Create dataloader
     train_loader, val_loader, train_sampler = create_train_val_dataloader(configs)
     if logger is not None:
-        logger.info('number of batches in train set: {}, val set: {}'.format(len(train_loader), len(val_loader)))
+        logger.info('number of batches in train set: {}'.format(len(train_loader)))
+        if val_loader is not None:
+            logger.info('number of batches in val set: {}'.format(len(val_loader)))
+
 
     if configs.evaluate:
         val_loss = validate_one_epoch(val_loader, model, configs.start_epoch - 1, configs, logger)
@@ -138,39 +141,46 @@ def main_worker(gpu_idx, configs):
         # train for one epoch
         train_loss = train_one_epoch(train_loader, model, optimizer, epoch, configs, logger)
         # evaluate on validation set
-        val_loss = validate_one_epoch(val_loader, model, epoch, configs, logger)
-
-        is_best = val_loss <= best_val_loss
-        best_val_loss = min(val_loss, best_val_loss)
-        print_string = '\t--- train_loss: {:.4f}, val_loss: {:.4f}, best_val_loss: {:.4f}\t'.format(
-            train_loss,
-            val_loss,
-            best_val_loss)
-        if tb_writer is not None:
-            tb_writer.add_scalars('Loss', {'train': train_loss, 'val': val_loss}, epoch)
-
-        if configs.is_master_node and (is_best or ((epoch % configs.checkpoint_freq) == 0)):
-            saved_state = get_saved_state(model, optimizer, lr_scheduler, epoch, configs, best_val_loss,
-                                          earlystop_count)
-            save_checkpoint(configs.checkpoints_dir, configs.saved_fn, saved_state, is_best, epoch)
+        if not configs.no_val:
+            val_loss = validate_one_epoch(val_loader, model, epoch, configs, logger)
 
         # Adjust learning rate
         if configs.lr_type == 'step_lr':
             lr_scheduler.step()
         elif configs.lr_type == 'plateau':
+            assert configs.no_val == True, "Only use plateau when having validation set"
             lr_scheduler.step(val_loss)
 
-        if configs.earlystop_patience:
-            earlystop_count = 0 if is_best else (earlystop_count + 1)
-            print_string += ' |||\t earlystop_count: {}'.format(earlystop_count)
-            if configs.earlystop_patience <= earlystop_count:
-                print_string += '\n\t--- Early stopping!!!'
-                break
-            else:
-                print_string += '\n\t--- Continue training..., earlystop_count: {}'.format(earlystop_count)
+        if not configs.no_val:
+            is_best = val_loss <= best_val_loss
+            best_val_loss = min(val_loss, best_val_loss)
+            print_string = '\t--- train_loss: {:.4f}, val_loss: {:.4f}, best_val_loss: {:.4f}\t'.format(
+                train_loss,
+                val_loss,
+                best_val_loss)
+            if tb_writer is not None:
+                tb_writer.add_scalars('Loss', {'train': train_loss, 'val': val_loss}, epoch)
 
-        if logger is not None:
-            logger.info(print_string)
+            if configs.is_master_node and (is_best or ((epoch % configs.checkpoint_freq) == 0)):
+                saved_state = get_saved_state(model, optimizer, lr_scheduler, epoch, configs, best_val_loss,
+                                              earlystop_count)
+                save_checkpoint(configs.checkpoints_dir, configs.saved_fn, saved_state, is_best, epoch)
+
+            if configs.earlystop_patience:
+                earlystop_count = 0 if is_best else (earlystop_count + 1)
+                print_string += ' |||\t earlystop_count: {}'.format(earlystop_count)
+                if configs.earlystop_patience <= earlystop_count:
+                    print_string += '\n\t--- Early stopping!!!'
+                    break
+                else:
+                    print_string += '\n\t--- Continue training..., earlystop_count: {}'.format(earlystop_count)
+
+            if logger is not None:
+                logger.info(print_string)
+        else:
+            if tb_writer is not None:
+                tb_writer.add_scalars('Loss', {'train': train_loss}, epoch)
+
     if tb_writer is not None:
         tb_writer.close()
     cleanup()
