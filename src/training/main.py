@@ -120,8 +120,8 @@ def main_worker(gpu_idx, configs):
         if val_loader is not None:
             logger.info('number of batches in val set: {}'.format(len(val_loader)))
 
-
     if configs.evaluate:
+        assert val_loader is not None, "The validation should not be None"
         val_loss = validate_one_epoch(val_loader, model, configs.start_epoch - 1, configs, logger)
         print('Evaluate, val_loss: {}'.format(val_loss))
         return
@@ -211,14 +211,18 @@ def train_one_epoch(train_loader, model, optimizer, epoch, configs, logger):
             origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg) in enumerate(
         tqdm(train_loader)):
         data_time.update(time.time() - start_time)
-        batch_size = origin_imgs.size(0)
+        batch_size = resized_imgs.size(0)
         target_seg = target_seg.to(configs.device, non_blocking=True)
         resized_imgs = resized_imgs.to(configs.device, non_blocking=True).float()
-        origin_imgs = origin_imgs.to(configs.device, non_blocking=True).float()
-
-        # compute output
-        pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy, total_loss, _ = model(
-            origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg)
+        # Only move origin_imgs to cuda if the model has local stage for ball detection
+        if not configs.no_local:
+            origin_imgs = origin_imgs.to(configs.device, non_blocking=True).float()
+            # compute output
+            pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy, total_loss, _ = model(
+                origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg)
+        else:
+            pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy, total_loss, _ = model(
+                None, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg)
         # For torch.nn.DataParallel case
         if (not configs.distributed) and (configs.gpu_idx is None):
             total_loss = torch.mean(total_loss)
@@ -260,13 +264,18 @@ def validate_one_epoch(val_loader, model, epoch, configs, logger):
                 origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg) in enumerate(
             tqdm(val_loader)):
             data_time.update(time.time() - start_time)
-            batch_size = origin_imgs.size(0)
+            batch_size = resized_imgs.size(0)
             target_seg = target_seg.to(configs.device, non_blocking=True)
             resized_imgs = resized_imgs.to(configs.device, non_blocking=True).float()
-            origin_imgs = origin_imgs.to(configs.device, non_blocking=True).float()
-            # compute output
-            pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy, total_loss, _ = model(
-                origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg)
+            # Only move origin_imgs to cuda if the model has local stage for ball detection
+            if not configs.no_local:
+                origin_imgs = origin_imgs.to(configs.device, non_blocking=True).float()
+                # compute output
+                pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy, total_loss, _ = model(
+                    origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg)
+            else:
+                pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy, total_loss, _ = model(
+                    None, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg)
             # For torch.nn.DataParallel case
             if (not configs.distributed) and (configs.gpu_idx is None):
                 total_loss = torch.mean(total_loss)
