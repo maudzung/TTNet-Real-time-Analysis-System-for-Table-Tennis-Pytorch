@@ -15,7 +15,7 @@ from tqdm import tqdm
 sys.path.append('../')
 
 from data_process.ttnet_dataloader import create_train_val_dataloader, create_test_dataloader
-from training.train_utils import get_model, get_optimizer, get_lr_scheduler, get_saved_state
+from training.train_utils import get_model, get_optimizer, get_lr_scheduler, get_saved_state, load_pretrained_model
 from training.train_utils import make_data_parallel, resume_model, save_checkpoint, get_num_parameters
 from utils.misc import AverageMeter, ProgressMeter
 from utils.logger import Logger
@@ -97,6 +97,10 @@ def main_worker(gpu_idx, configs):
     lr_scheduler = get_lr_scheduler(optimizer, configs)
     best_val_loss = np.inf
     earlystop_count = 0
+
+    # optionally load weight from a checkpoint
+    if configs.pretrained_path is not None:
+        model = load_pretrained_model(model, configs.pretrained_path, gpu_idx)
 
     # optionally resume from a checkpoint
     if configs.resume_path is not None:
