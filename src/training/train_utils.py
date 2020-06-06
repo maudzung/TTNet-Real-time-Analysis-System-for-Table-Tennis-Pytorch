@@ -49,6 +49,18 @@ def get_num_parameters(model):
     return num_parameters
 
 
+def load_weights_local_stage(pretrained_dict):
+    local_weights_dict = {}
+    for layer_name, v in pretrained_dict.items():
+        if 'ball_global_stage' in layer_name:
+            layer_name_parts = layer_name.split('.')
+            layer_name_parts[1] = 'ball_local_stage'
+            local_name = '.'.join(layer_name_parts)
+            local_weights_dict[local_name] = v
+
+    return {**pretrained_dict, **local_weights_dict}
+
+
 def load_pretrained_model(model, pretrained_path, gpu_idx):
     assert os.path.isfile(pretrained_path), "=> no checkpoint found at '{}'".format(pretrained_path)
     if gpu_idx is None:
@@ -62,6 +74,8 @@ def load_pretrained_model(model, pretrained_path, gpu_idx):
         model_state_dict = model.module.state_dict()
         # 1. filter out unnecessary keys
         pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_state_dict}
+        # Load global to local stage
+        pretrained_dict = load_weights_local_stage(pretrained_dict)
         # 2. overwrite entries in the existing state dict
         model_state_dict.update(pretrained_dict)
         # 3. load the new state dict
@@ -70,6 +84,8 @@ def load_pretrained_model(model, pretrained_path, gpu_idx):
         model_state_dict = model.state_dict()
         # 1. filter out unnecessary keys
         pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_state_dict}
+        # Load global to local stage
+        pretrained_dict = load_weights_local_stage(pretrained_dict)
         # 2. overwrite entries in the existing state dict
         model_state_dict.update(pretrained_dict)
         # 3. load the new state dict
