@@ -1,7 +1,7 @@
 #!/bin/bash
 
 python main.py \
-  --saved_fn 'ttnet_official' \
+  --saved_fn 'ttnet_no_local_no_event' \
   --arch 'ttnet' \
   --no-val \
   --batch_size 32 \
@@ -17,4 +17,8 @@ python main.py \
   --rank 0 \
   --dist-backend 'nccl' \
   --multiprocessing-distributed \
-  --weight_decay 0.
+  --weight_decay 0. \
+  --no_local \
+  --no_event \
+  --global_weight 5.0 \
+  --seg_weight 1.0
