@@ -55,11 +55,9 @@ class TTNet_Dataset(Dataset):
         resized_imgs = resized_imgs.transpose(2, 0, 1)
         origin_imgs = origin_imgs.transpose(2, 0, 1)
         target_seg = seg_img.transpose(2, 0, 1).astype(np.float)
-        # Segmentation mask should be in a range of (0, 1)
-        if target_seg.max() > 1.:
-            target_seg = target_seg / 255.
-        target_seg[target_seg >= 0.3] = 1.
-        target_seg[target_seg < 0.3] = 0.
+        # Segmentation mask should be 0 or 1
+        target_seg[target_seg < 75] = 0.
+        target_seg[target_seg >= 75] = 1.
 
         return origin_imgs, resized_imgs, np.array(org_ball_pos_xy), np.array(global_ball_pos_xy), np.array(
             event_class), target_seg
