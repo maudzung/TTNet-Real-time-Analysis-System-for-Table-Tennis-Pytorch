@@ -1,5 +1,5 @@
 python main.py \
-  --saved_fn 'ttnet_official' \
+  --saved_fn 'ttnet_multitask_learning_official' \
   --arch 'ttnet' \
   --no-val \
   --batch_size 32 \
@@ -7,7 +7,7 @@ python main.py \
   --thresh_ball_pos_mask 0.01 \
   --start_epoch 1 \
   --num_epochs 100 \
-  --lr 0.0002 \
+  --lr 0.005 \
   --lr_type 'step_lr' \
   --lr_step_size 10 \
   --lr_factor 0.5 \
@@ -15,4 +15,5 @@ python main.py \
   --rank 0 \
   --dist-backend 'nccl' \
   --multiprocessing-distributed \
-  --weight_decay 1e-6
+  --weight_decay 1e-6 \
+  --multitask_learning

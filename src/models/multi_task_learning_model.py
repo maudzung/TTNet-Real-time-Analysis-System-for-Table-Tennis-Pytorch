@@ -46,7 +46,7 @@ class Multi_Task_Learning_Model(nn.Module):
                                                                 thresh_mask=self.thresh_ball_pos_mask,
                                                                 device=self.device)
         global_ball_loss = self.ball_loss_criterion(pred_ball_global, target_ball_global)
-        total_loss = global_ball_loss / (torch.exp(self.log_vars[log_vars_idx])) + self.log_vars[log_vars_idx]
+        total_loss = global_ball_loss / (torch.exp(2 * self.log_vars[log_vars_idx])) + self.log_vars[log_vars_idx]
 
         if pred_ball_local is not None:
             log_vars_idx += 1
@@ -57,7 +57,7 @@ class Multi_Task_Learning_Model(nn.Module):
                                                                    thresh_mask=self.thresh_ball_pos_mask,
                                                                    device=self.device)
             local_ball_loss = self.ball_loss_criterion(pred_ball_local, target_ball_local)
-            total_loss += local_ball_loss / (torch.exp(self.log_vars[log_vars_idx])) + self.log_vars[log_vars_idx]
+            total_loss += local_ball_loss / (torch.exp(2 * self.log_vars[log_vars_idx])) + self.log_vars[log_vars_idx]
 
         if pred_events is not None:
             log_vars_idx += 1
@@ -65,12 +65,12 @@ class Multi_Task_Learning_Model(nn.Module):
             for sample_idx in range(batch_size):
                 target_events[sample_idx] = create_target_events(event_class[sample_idx], device=self.device)
             event_loss = self.event_loss_criterion(pred_events, target_events)
-            total_loss += event_loss / (torch.exp(self.log_vars[log_vars_idx])) + self.log_vars[log_vars_idx]
+            total_loss += event_loss / (2 * torch.exp(self.log_vars[log_vars_idx])) + self.log_vars[log_vars_idx]
 
         if pred_seg is not None:
             log_vars_idx += 1
             seg_loss = self.seg_loss_criterion(pred_seg, target_seg)
-            total_loss += seg_loss / (torch.exp(self.log_vars[log_vars_idx])) + self.log_vars[log_vars_idx]
+            total_loss += seg_loss / (2 * torch.exp(self.log_vars[log_vars_idx])) + self.log_vars[log_vars_idx]
 
         # Final weights: [math.exp(log_var) ** 0.5 for log_var in log_vars]
 
