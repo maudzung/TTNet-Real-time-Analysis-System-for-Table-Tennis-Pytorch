@@ -86,6 +86,14 @@ def parse_configs():
                         help='patience of the learning rate when using ReduceoPlateau scheduler')
     parser.add_argument('--earlystop_patience', type=int, default=12, metavar='N',
                         help='Early stopping the training process if performance is not improved within this value')
+    parser.add_argument('--freeze_global', action='store_true',
+                        help='If true, no update/train weights for the global stage of ball detection.')
+    parser.add_argument('--freeze_local', action='store_true',
+                        help='If true, no update/train weights for the local stage of ball detection.')
+    parser.add_argument('--freeze_event', action='store_true',
+                        help='If true, no update/train weights for the event module.')
+    parser.add_argument('--freeze_seg', action='store_true',
+                        help='If true, no update/train weights for the segmentation module.')
 
     ####################################################################
     ##############     Loss weight            ###################
