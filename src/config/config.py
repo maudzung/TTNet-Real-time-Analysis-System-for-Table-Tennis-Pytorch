@@ -32,6 +32,8 @@ def parse_configs():
                         help='If true, no event spotting detection.')
     parser.add_argument('--no_seg', action='store_true',
                         help='If true, no segmentation module.')
+    parser.add_argument('--pretrained_path', type=str, default=None, metavar='PATH',
+                        help='the path of the pretrained checkpoint')
 
     ####################################################################
     ##############     Dataloader and Running configs            #######
