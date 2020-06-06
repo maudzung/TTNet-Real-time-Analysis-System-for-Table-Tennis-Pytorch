@@ -49,6 +49,26 @@ def get_num_parameters(model):
     return num_parameters
 
 
+def freeze_model(model, configs):
+    freeze_list = []
+    if configs.freeze_global:
+        freeze_list.append('ball_global_stage')
+    if configs.freeze_local:
+        freeze_list.append('ball_local_stage')
+    if configs.freeze_event:
+        freeze_list.append('events_spotting')
+    if configs.freeze_seg:
+        freeze_list.append('segmentation')
+    for layer_name, p in model.named_parameters():
+        layer_name_parts = layer_name.split('.')
+        if layer_name_parts[1] in freeze_list:
+            p.requires_grad = False
+        else:
+            p.requires_grad = True
+
+    return model
+
+
 def load_weights_local_stage(pretrained_dict):
     local_weights_dict = {}
     for layer_name, v in pretrained_dict.items():

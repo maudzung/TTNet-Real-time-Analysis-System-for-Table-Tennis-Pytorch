@@ -16,7 +16,7 @@ sys.path.append('../')
 
 from data_process.ttnet_dataloader import create_train_val_dataloader, create_test_dataloader
 from training.train_utils import get_model, get_optimizer, get_lr_scheduler, get_saved_state, load_pretrained_model
-from training.train_utils import make_data_parallel, resume_model, save_checkpoint, get_num_parameters
+from training.train_utils import make_data_parallel, resume_model, save_checkpoint, get_num_parameters, freeze_model
 from utils.misc import AverageMeter, ProgressMeter
 from utils.logger import Logger
 from config.config import parse_configs
@@ -89,6 +89,10 @@ def main_worker(gpu_idx, configs):
 
     # Data Parallel
     model = make_data_parallel(model, configs)
+
+    # Freeze model
+    model = freeze_model(model, configs)
+
     if configs.is_master_node:
         num_parameters = get_num_parameters(model)
         logger.info('number of trained parameters of the model: {}'.format(num_parameters))
