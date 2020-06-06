@@ -145,6 +145,7 @@ def parse_configs():
     configs.working_dir = '../../'
     configs.dataset_dir = os.path.join(configs.working_dir, 'dataset')
     configs.train_game_list = ['game_1', 'game_2', 'game_3', 'game_4', 'game_5']
+    configs.test_game_list = ['test_1', 'test_2', 'test_3', 'test_4', 'test_5', 'test_6', 'test_7']
     configs.events_dict = {
         'bounce': 0,
         'net': 1,
