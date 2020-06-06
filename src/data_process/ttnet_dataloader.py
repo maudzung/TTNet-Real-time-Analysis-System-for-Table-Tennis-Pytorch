@@ -62,10 +62,10 @@ def create_test_dataloader(configs):
 
     """
     test_transform = None
-    resize_transform = Resize(new_size=(320, 128), p=1.0)
+    resize_transform = Resize(new_size=tuple(configs.input_size), p=1.0)
 
     dataset_type = 'test'
-    test_events_infor = get_events_infor(configs.train_game_list, configs, dataset_type)
+    test_events_infor, test_events_labels = get_events_infor(configs.test_game_list, configs, dataset_type)
     test_dataset = TTNet_Dataset(test_events_infor, configs.events_dict, configs.input_size, transform=test_transform,
                                  resize=resize_transform, num_samples=configs.num_samples)
 
