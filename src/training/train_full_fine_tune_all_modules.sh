@@ -1,7 +1,7 @@
 #!/bin/bash
 
 python main.py \
-  --saved_fn 'ttnet_full_freeze_global_freeze_seg' \
+  --saved_fn 'ttnet_full_finetune' \
   --arch 'ttnet' \
   --no-val \
   --batch_size 32 \
@@ -21,6 +21,6 @@ python main.py \
   --weight_decay 0. \
   --global_weight 1. \
   --seg_weight 1. \
-  --event_weight 2. \
+  --event_weight 1. \
   --local_weight 1. \
   --pretrained_path ../../checkpoints/ttnet_full_freeze_global_freeze_seg/ttnet_full_freeze_global_freeze_seg_epoch_21.pth
