@@ -17,7 +17,7 @@ An introduction of the project could be found [here (from the authors)](https://
 - [x] [Multi-Task learning](https://arxiv.org/pdf/1705.07115.pdf)
 - [x] [Distributed Data Parallel Training](https://github.com/pytorch/examples/tree/master/distributed/ddp)
 - [x] Enable/Disable modules in the TTNet model
-- [ ] Evaluate
+- [x] Evaluate
 - [x] TensorboardX
 
 ## 2. Getting Started
@@ -89,7 +89,32 @@ _**Second machine**_
 python main.py --dist-url 'tcp://IP_OF_NODE2:FREEPORT' --dist-backend 'nccl' --multiprocessing-distributed --world-size 2 --rank 1
 ```
 
-#### 2.2.2. Evaluation
+#### 2.2.2. Training stratergy
+
+The performance of the TTNet strongly depends on the global stage for ball detection. Hence, It's necessary to train the 
+`global ball stage module` of the TTNet model first.
+
+- **1st phase**: Train the global and segmentation modules with 21 epochs
+ 
+```shell script
+cd src/training/
+./train_no_local_no_event.sh
+```  
+
+- **2nd phase**: Load the trained weights to the global and the segmentation part, initialize the weight of the local stage with the weights of
+the global stage. In this phase, we train and just update weights of the local and the event modules. (21 epochs)
+
+```shell script
+cd src/training/
+./train_full_freeze_global_freeze_seg.sh
+```
+
+- **3rd phase**: Fine tune all modules. Train the network with only 9 epochs
+
+```shell script
+cd src/training/
+./train_full_fine_tune_all_modules.sh
+```
 
   
 #### 2.2.3. Visualizing training progress
@@ -102,25 +127,46 @@ Execute the below command on the working terminal:
 
 Then open the web browser and go to: [http://localhost:6006/](http://localhost:6006/)
 
+
+#### 2.2.4. Evaluation
+
+We can set the thresholds of the segmentation and event spotting modules in `test.sh` bash shell scripts.
+
+```shell script
+cd src/inference/
+./test.sh
+```
+
+
 ## Usage
 ```
-python main.py [-h] [--seed SEED] [-a ARCH] [--dropout_p P]
+python main.py [-h] [--seed SEED] [--saved_fn FN] [-a ARCH] [--dropout_p P]
                [--multitask_learning] [--no_local] [--no_event] [--no_seg]
-               [--num_samples NUM_SAMPLES] [--num_workers NUM_WORKERS]
-               [--batch_size BATCH_SIZE] [-pf N] [-chf N] [--start_epoch N]
+               [--pretrained_path PATH] [--overwrite_global_2_local]
+               [--no-val] [--val-size VAL_SIZE] [--num_samples NUM_SAMPLES]
+               [--num_workers NUM_WORKERS] [--batch_size BATCH_SIZE]
+               [--print_freq N] [--checkpoint_freq N] [--sigma SIGMA]
+               [--thresh_ball_pos_mask THRESH] [--start_epoch N]
                [--num_epochs N] [--lr LR] [--minimum_lr MIN_LR] [--momentum M]
                [-wd WD] [--optimizer_type OPTIMIZER] [--lr_type SCHEDULER]
                [--lr_factor FACTOR] [--lr_step_size STEP_SIZE]
-               [--lr_patience N] [--earlystop_patience N] [--world-size N]
-               [--rank N] [--dist-url DIST_URL] [--dist-backend DIST_BACKEND]
+               [--lr_patience N] [--earlystop_patience N] [--freeze_global]
+               [--freeze_local] [--freeze_event] [--freeze_seg]
+               [--bce_weight BCE_WEIGHT] [--global_weight GLOBAL_WEIGHT]
+               [--local_weight LOCAL_WEIGHT] [--event_weight EVENT_WEIGHT]
+               [--seg_weight SEG_WEIGHT] [--world-size N] [--rank N]
+               [--dist-url DIST_URL] [--dist-backend DIST_BACKEND]
                [--gpu_idx GPU_IDX] [--no_cuda] [--multiprocessing-distributed]
                [--evaluate] [--resume_path PATH] [--use_best_checkpoint]
+               [--seg_thresh SEG_THRESH] [--event_thresh EVENT_THRESH]
+               [--save_test_output]
 
 TTNet Implementation
 
 optional arguments:
   -h, --help            show this help message and exit
   --seed SEED           re-produce the results with seed random
+  --saved_fn FN         The name using for saving logs, models,...
   -a ARCH, --arch ARCH  The name of the model architecture
   --dropout_p P         The dropout probability of the model
   --multitask_learning  If true, the weights of different losses will be
@@ -129,6 +175,13 @@ optional arguments:
   --no_local            If true, no local stage for ball detection.
   --no_event            If true, no event spotting detection.
   --no_seg              If true, no segmentation module.
+  --pretrained_path PATH
+                        the path of the pretrained checkpoint
+  --overwrite_global_2_local
+                        If true, the weights of the local stage will be
+                        overwritten by the global stage.
+  --no-val              If true, use all data for training, no validation set
+  --val-size VAL_SIZE   The size of validation set
   --num_samples NUM_SAMPLES
                         Take a subset of the dataset to run and debug
   --num_workers NUM_WORKERS
@@ -137,10 +190,13 @@ optional arguments:
                         mini-batch size (default: 16), this is the totalbatch
                         size of all GPUs on the current node when usingData
                         Parallel or Distributed Data Parallel
-  -pf N, --print_freq N
-                        print frequency (default: 10)
-  -chf N, --checkpoint_freq N
-                        frequency of saving checkpoints (default: 3)
+  --print_freq N        print frequency (default: 10)
+  --checkpoint_freq N   frequency of saving checkpoints (default: 3)
+  --sigma SIGMA         standard deviation of the 1D Gaussian for the ball
+                        position target
+  --thresh_ball_pos_mask THRESH
+                        the lower thresh for the 1D Gaussian of the ball
+                        position target
   --start_epoch N       the starting epoch
   --num_epochs N        number of total epochs to run
   --lr LR               initial learning rate
@@ -161,6 +217,26 @@ optional arguments:
   --earlystop_patience N
                         Early stopping the training process if performance is
                         not improved within this value
+  --freeze_global       If true, no update/train weights for the global stage
+                        of ball detection.
+  --freeze_local        If true, no update/train weights for the local stage
+                        of ball detection.
+  --freeze_event        If true, no update/train weights for the event module.
+  --freeze_seg          If true, no update/train weights for the segmentation
+                        module.
+  --bce_weight BCE_WEIGHT
+                        The weight of BCE loss in segmentation module, the
+                        dice_loss weight = 1- bce_weight
+  --global_weight GLOBAL_WEIGHT
+                        The weight of loss of the global stage for ball
+                        detection
+  --local_weight LOCAL_WEIGHT
+                        The weight of loss of the local stage for ball
+                        detection
+  --event_weight EVENT_WEIGHT
+                        The weight of loss of the event spotting module
+  --seg_weight SEG_WEIGHT
+                        The weight of BCE loss in segmentation module
   --world-size N        number of nodes for distributed training
   --rank N              node rank for distributed training
   --dist-url DIST_URL   url used to set up distributed training
@@ -178,4 +254,9 @@ optional arguments:
   --use_best_checkpoint
                         If true, choose the best model on val set, otherwise
                         choose the last model
+  --seg_thresh SEG_THRESH
+                        threshold of the segmentation output
+  --event_thresh EVENT_THRESH
+                        threshold of the event spotting output
+  --save_test_output    If true, the image of testing phase will be saved
 ```
