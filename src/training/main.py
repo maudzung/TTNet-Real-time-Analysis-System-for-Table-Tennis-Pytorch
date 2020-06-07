@@ -91,7 +91,7 @@ def main_worker(gpu_idx, configs):
     model = make_data_parallel(model, configs)
 
     # Freeze model
-    model = freeze_model(model, configs)
+    model = freeze_model(model, configs.freeze_modules_list)
 
     if configs.is_master_node:
         num_parameters = get_num_parameters(model)
@@ -105,6 +105,8 @@ def main_worker(gpu_idx, configs):
     # optionally load weight from a checkpoint
     if configs.pretrained_path is not None:
         model = load_pretrained_model(model, configs.pretrained_path, gpu_idx)
+        if logger is not None:
+            logger.info('loaded pretrained model at {}'.format(configs.pretrained_path))
 
     # optionally resume from a checkpoint
     if configs.resume_path is not None:
@@ -142,7 +144,7 @@ def main_worker(gpu_idx, configs):
             logger.info('{}'.format('*-' * 40))
             logger.info('{} {}/{} {}'.format('=' * 35, epoch, configs.num_epochs, '=' * 35))
             logger.info('{}'.format('*-' * 40))
-            logger.info('>>> Epoch: [{}/{}] learning rate: {}'.format(epoch, configs.num_epochs, lr))
+            logger.info('>>> Epoch: [{}/{}] learning rate: {:.2e}'.format(epoch, configs.num_epochs, lr))
 
         if configs.distributed:
             train_sampler.set_epoch(epoch)
