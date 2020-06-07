@@ -194,6 +194,17 @@ def parse_configs():
     configs.tasks_loss_weight = []
     for task in configs.tasks:
         configs.tasks_loss_weight.append(loss_weight_dict[task])
+
+    configs.freeze_modules_list = []
+    if configs.freeze_global:
+        configs.freeze_modules_list.append('ball_global_stage')
+    if configs.freeze_local:
+        configs.freeze_modules_list.append('ball_local_stage')
+    if configs.freeze_event:
+        configs.freeze_modules_list.append('events_spotting')
+    if configs.freeze_seg:
+        configs.freeze_modules_list.append('segmentation')
+
     ####################################################################
     ############## logs, Checkpoints, and results dir ########################
     ####################################################################
