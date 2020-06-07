@@ -140,6 +140,12 @@ def parse_configs():
                         help='the path of the resumed checkpoint')
     parser.add_argument('--use_best_checkpoint', action='store_true',
                         help='If true, choose the best model on val set, otherwise choose the last model')
+    parser.add_argument('--seg_thresh', type=float, default=0.5,
+                        help='threshold of the segmentation output')
+    parser.add_argument('--event_thresh', type=float, default=0.5,
+                        help='threshold of the event spotting output')
+    parser.add_argument('--save_test_output', action='store_true',
+                        help='If true, the image of testing phase will be saved')
 
     configs = edict(vars(parser.parse_args()))
 
@@ -224,6 +230,10 @@ def parse_configs():
     make_folder(configs.checkpoints_dir)
     make_folder(configs.logs_dir)
     make_folder(configs.results_dir)
+
+    if configs.save_test_output:
+        configs.saved_dir = os.path.join(configs.results_dir, configs.saved_fn)
+        make_folder(configs.saved_dir)
 
     return configs
 
