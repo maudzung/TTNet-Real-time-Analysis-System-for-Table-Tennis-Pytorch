@@ -81,6 +81,9 @@ def test(test_loader, model, configs):
     mse_global = AverageMeter('MSE_Global', ':6.4f')
     mse_local = AverageMeter('MSE_Local', ':6.4f')
 
+    w_original = 1920.
+    h_original = 1080.
+
     # switch to evaluate mode
     model.eval()
     with torch.no_grad():
@@ -88,6 +91,9 @@ def test(test_loader, model, configs):
         for batch_idx, (
                 origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg) in enumerate(
             tqdm(test_loader)):
+
+            print('\n===================== batch_idx: {} ================================'.format(batch_idx))
+
             data_time.update(time.time() - start_time)
             batch_size = resized_imgs.size(0)
             target_seg = target_seg.to(configs.device, non_blocking=True)
@@ -131,10 +137,12 @@ def test(test_loader, model, configs):
                             sample_pred_ball_global_y - sample_global_ball_pos_xy[1]) ** 2
                     mse_global.update(mse)
 
-                print('Global stage: (x, y) - org: ({}, {}), gt = ({}, {}), prediction = ({}, {})'.format(
-                    sample_org_ball_pos_xy[0], sample_org_ball_pos_xy[1],
+                print('\nBall Detection - \t Global stage: \t (x, y) - gt = ({}, {}), prediction = ({}, {})'.format(
                     sample_global_ball_pos_xy[0], sample_global_ball_pos_xy[1], sample_pred_ball_global_x,
                     sample_pred_ball_global_y))
+
+                sample_pred_org_x = sample_pred_ball_global_x * (w_original / w)
+                sample_pred_org_y = sample_pred_ball_global_y * (h_original / h)
 
                 # Process local ball stage
                 if pred_ball_local is not None:
@@ -151,10 +159,16 @@ def test(test_loader, model, configs):
                         mse = (sample_pred_ball_local_x - sample_local_ball_pos_xy[0]) ** 2 + (
                                 sample_pred_ball_local_y - sample_local_ball_pos_xy[1]) ** 2
                         mse_local.update(mse)
+                        sample_pred_org_x += sample_pred_ball_local_x - w / 2
+                        sample_pred_org_y += sample_pred_ball_local_y - h / 2
 
-                    print('Local stage: (x, y) - gt = ({}, {}), prediction = ({}, {})'.format(
+                    print('Ball Detection - \t Local stage: \t (x, y) - gt = ({}, {}), prediction = ({}, {})'.format(
                         sample_local_ball_pos_xy[0], sample_local_ball_pos_xy[1], sample_pred_ball_local_x,
                         sample_pred_ball_local_y))
+
+                print('Ball Detection - \t Overall: \t (x, y) - org: ({}, {}), prediction = ({}, {})'.format(
+                    sample_org_ball_pos_xy[0], sample_org_ball_pos_xy[1], int(sample_pred_org_x),
+                    int(sample_pred_org_y)))
 
                 # Process event stage
                 if pred_events is not None:
@@ -163,7 +177,10 @@ def test(test_loader, model, configs):
                     if sample_target_event < 2:
                         vec_sample_target_event[sample_target_event] = 1
                     sample_pred_event = (pred_events[sample_idx] > configs.event_thresh).astype(np.int)
-                    print('Event stage: gt = {}, prediction: {}'.format(sample_target_event, pred_events[sample_idx]))
+                    print(
+                        'Event Spotting - \t gt = (is bounce: {}, is net: {}), prediction: (is bounce: {:.4f}, is net: {:.4f})'.format(
+                            vec_sample_target_event[0], vec_sample_target_event[1], pred_events[sample_idx][0],
+                            pred_events[sample_idx][1]))
                     diff = sample_pred_event - vec_sample_target_event
                     # Check correct or not
                     if np.sum(diff) != 0:
@@ -184,6 +201,9 @@ def test(test_loader, model, configs):
                     iou = 2 * np.sum(sample_target_seg * sample_pred_seg) / (
                             np.sum(sample_target_seg) + np.sum(sample_pred_seg) + 1e-9)
                     iou_seg.update(iou)
+
+                    print('Segmentation - \t \t IoU = {:.4f}'.format(iou))
+
                     if configs.save_test_output:
                         fig, axes = plt.subplots(nrows=batch_size, ncols=2, figsize=(10, 5))
                         plt.tight_layout()
@@ -206,14 +226,14 @@ def test(test_loader, model, configs):
                                                  'batch_idx_{}_sample_idx_{}.jpg'.format(batch_idx, sample_idx)))
 
             if ((batch_idx + 1) % configs.print_freq) == 0:
-                print('batch_idx: {} - Average acc_event: {}, iou_seg: {}, mse_global: {}, mse_local: {}'.format(
+                print('batch_idx: {} - Average acc_event: {:.4f}, iou_seg: {:.4f}, mse_global: {:.1f}, mse_local: {:.1f}'.format(
                     batch_idx, acc_event.avg, iou_seg.avg, mse_global.avg, mse_local.avg))
 
             batch_time.update(time.time() - start_time)
 
             start_time = time.time()
 
-    print('Average acc_event: {}, iou_seg: {}, mse_global: {}, mse_local: {}'.format(acc_event.avg, iou_seg.avg,
+    print('Average acc_event: {:.4f}, iou_seg: {:.4f}, mse_global: {:.1f}, mse_local: {:.1f}'.format(acc_event.avg, iou_seg.avg,
                                                                                      mse_global.avg, mse_local.avg))
     print('Done testing')
 
