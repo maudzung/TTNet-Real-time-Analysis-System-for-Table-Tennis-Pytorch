@@ -104,7 +104,7 @@ def main_worker(gpu_idx, configs):
 
     # optionally load weight from a checkpoint
     if configs.pretrained_path is not None:
-        model = load_pretrained_model(model, configs.pretrained_path, gpu_idx)
+        model = load_pretrained_model(model, configs.pretrained_path, gpu_idx, configs.overwrite_global_2_local)
         if logger is not None:
             logger.info('loaded pretrained model at {}'.format(configs.pretrained_path))
 

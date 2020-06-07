@@ -34,6 +34,8 @@ def parse_configs():
                         help='If true, no segmentation module.')
     parser.add_argument('--pretrained_path', type=str, default=None, metavar='PATH',
                         help='the path of the pretrained checkpoint')
+    parser.add_argument('--overwrite_global_2_local', action='store_true',
+                        help='If true, the weights of the local stage will be overwritten by the global stage.')
 
     ####################################################################
     ##############     Dataloader and Running configs            #######
