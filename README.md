@@ -32,13 +32,23 @@ Other instruction for setting up virtual environments is [here](https://github.c
 ### 2.1. Preparing the dataset
 The instruction for the dataset preparation is [here](./prepare_dataset/README.md)
 
-### 2.2. How to run
+### 2.2. Model & Input tensors
 
-#### 2.2.1. Training
+**TTNet model architecture**:
+
+![architecture](./docs/architecture.PNG)
+
+**Input tensor structure**
+
+![input tensor](./docs/input_tensor.PNG)
+
+### 2.3. How to run
+
+#### 2.3.1. Training
 ```shell script
 cd src/training/
 ```
-##### 2.2.1.1. Single machine, single gpu
+##### 2.3.1.1. Single machine, single gpu
 
 ```shell script
 python main.py --gpu_idx 0
@@ -48,26 +58,26 @@ By default (as the above command), there are 4 modules in the TTNet model: *glob
 You can disable one of the modules, except the global stage module.<br>
 An important note is if you disable the local stage module, the event spotting module will be also disabled.
 
-An example you can run to disable the _**segmentation stage**_:
+- You can disable the _**segmentation stage**_:
 
 ```shell script
 python main.py --gpu_idx 0 --no_seg
 ```
 
-An example you can run to disable the _**event spotting module**_:
+- You can disable the _**event spotting module**_:
 
 ```shell script
 python main.py --gpu_idx 0 --no_event
 ```
 
-An example you can run to disable the _**local stage, event spotting, segmentation modules**_:
+- You can disable the _**local stage, event spotting, segmentation modules**_:
 
 ```shell script
 python main.py --gpu_idx 0 --no_local --no_seg --no_event
 ```
 
-##### 2.2.1.2. Multi-processing Distributed Data Parallel Training
-We should always use the NCCL backend for multi-processing distributed training since it currently provides the best 
+##### 2.3.1.2. Multi-processing Distributed Data Parallel Training
+We should always use the `nccl` backend for multi-processing distributed training since it currently provides the best 
 distributed training performance.
 
 - **Single machine (node), multiple GPUs**
@@ -76,7 +86,7 @@ distributed training performance.
 python main.py --dist-url 'tcp://127.0.0.1:29500' --dist-backend 'nccl' --multiprocessing-distributed --world-size 1 --rank 0
 ```
 
-- **Multiple machines (nodes), multiple GPUs**
+- **Two machines (two nodes), multiple GPUs**
 
 _**First machine**_
 
@@ -89,7 +99,7 @@ _**Second machine**_
 python main.py --dist-url 'tcp://IP_OF_NODE2:FREEPORT' --dist-backend 'nccl' --multiprocessing-distributed --world-size 2 --rank 1
 ```
 
-#### 2.2.2. Training stratergy
+#### 2.3.2. Training stratergy
 
 The performance of the TTNet strongly depends on the global stage for ball detection. Hence, It's necessary to train the 
 `global ball stage module` of the TTNet model first.
@@ -117,7 +127,7 @@ cd src/training/
 ```
 
   
-#### 2.2.3. Visualizing training progress
+#### 2.3.3. Visualizing training progress
 The Tensorboard was used to save loss values on the training set and the validation set.
 Execute the below command on the working terminal:
 ```
@@ -128,7 +138,7 @@ Execute the below command on the working terminal:
 Then open the web browser and go to: [http://localhost:6006/](http://localhost:6006/)
 
 
-#### 2.2.4. Evaluation
+#### 2.3.4. Evaluation
 
 We can set the thresholds of the segmentation and event spotting modules in `test.sh` bash shell scripts.
 
