@@ -12,7 +12,7 @@ python main.py \
   --num_epochs 21 \
   --lr 0.001 \
   --lr_type 'step_lr' \
-  --lr_step_size 10 \
+  --lr_step_size 5 \
   --lr_factor 0.2 \
   --world-size 1 \
   --rank 0 \
