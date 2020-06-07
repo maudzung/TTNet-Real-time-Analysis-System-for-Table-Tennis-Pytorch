@@ -34,6 +34,7 @@ class DeconvBlock(nn.Module):
         self.conv1 = nn.Conv2d(in_channels, middle_channels, kernel_size=1, stride=1, padding=0)
         self.batchnorm1 = nn.BatchNorm2d(middle_channels)
         self.relu = nn.ReLU()
+        self.batchnorm_tconv = nn.BatchNorm2d(middle_channels)
         self.tconv = nn.ConvTranspose2d(middle_channels, middle_channels, kernel_size=3, stride=2, padding=1,
                                         output_padding=1)
         self.conv2 = nn.Conv2d(middle_channels, out_channels, kernel_size=1, stride=1, padding=0)
@@ -41,7 +42,7 @@ class DeconvBlock(nn.Module):
 
     def forward(self, x):
         x = self.relu(self.batchnorm1(self.conv1(x)))
-        x = self.relu(self.batchnorm1(self.tconv(x)))
+        x = self.relu(self.batchnorm_tconv(self.tconv(x)))
         x = self.relu(self.batchnorm2(self.conv2(x)))
 
         return x
