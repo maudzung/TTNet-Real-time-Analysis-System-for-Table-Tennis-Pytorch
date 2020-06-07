@@ -4,7 +4,7 @@ The instruction for preparing the TTNet dataset
 ### Download the dataset and unzip annotations
 
 ```shell script
-cd src/prepare_dataset
+cd prepare_dataset
 python download_dataset.py
 python unzip.py
 ```
