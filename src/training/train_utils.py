@@ -49,22 +49,13 @@ def get_num_parameters(model):
     return num_parameters
 
 
-def freeze_model(model, configs):
-    freeze_list = []
-    if configs.freeze_global:
-        freeze_list.append('ball_global_stage')
-    if configs.freeze_local:
-        freeze_list.append('ball_local_stage')
-    if configs.freeze_event:
-        freeze_list.append('events_spotting')
-    if configs.freeze_seg:
-        freeze_list.append('segmentation')
+def freeze_model(model, freeze_modules_list):
     for layer_name, p in model.named_parameters():
-        layer_name_parts = layer_name.split('.')
-        if layer_name_parts[1] in freeze_list:
-            p.requires_grad = False
-        else:
-            p.requires_grad = True
+        p.requires_grad = True
+        for freeze_module in freeze_modules_list:
+            if freeze_module in layer_name:
+                p.requires_grad = False
+                break
 
     return model
 
@@ -81,7 +72,7 @@ def load_weights_local_stage(pretrained_dict):
     return {**pretrained_dict, **local_weights_dict}
 
 
-def load_pretrained_model(model, pretrained_path, gpu_idx):
+def load_pretrained_model(model, pretrained_path, gpu_idx, overwrite_global_2_local):
     assert os.path.isfile(pretrained_path), "=> no checkpoint found at '{}'".format(pretrained_path)
     if gpu_idx is None:
         checkpoint = torch.load(pretrained_path, map_location='cpu')
@@ -95,7 +86,8 @@ def load_pretrained_model(model, pretrained_path, gpu_idx):
         # 1. filter out unnecessary keys
         pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_state_dict}
         # Load global to local stage
-        pretrained_dict = load_weights_local_stage(pretrained_dict)
+        if overwrite_global_2_local:
+            pretrained_dict = load_weights_local_stage(pretrained_dict)
         # 2. overwrite entries in the existing state dict
         model_state_dict.update(pretrained_dict)
         # 3. load the new state dict
@@ -105,7 +97,8 @@ def load_pretrained_model(model, pretrained_path, gpu_idx):
         # 1. filter out unnecessary keys
         pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_state_dict}
         # Load global to local stage
-        pretrained_dict = load_weights_local_stage(pretrained_dict)
+        if overwrite_global_2_local:
+            pretrained_dict = load_weights_local_stage(pretrained_dict)
         # 2. overwrite entries in the existing state dict
         model_state_dict.update(pretrained_dict)
         # 3. load the new state dict
@@ -140,7 +133,7 @@ def make_data_parallel(model, configs):
             # ourselves based on the total number of GPUs we have
             configs.batch_size = int(configs.batch_size / configs.ngpus_per_node)
             configs.num_workers = int((configs.num_workers + configs.ngpus_per_node - 1) / configs.ngpus_per_node)
-            model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[configs.gpu_idx])
+            model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[configs.gpu_idx], find_unused_parameters=True)
         else:
             model.cuda()
             # DistributedDataParallel will divide and allocate batch_size to all
