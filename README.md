@@ -140,6 +140,9 @@ Then open the web browser and go to: [http://localhost:6006/](http://localhost:6
 
 #### 2.3.4. Evaluation
 
+The pre-trained TTNet model can be downloaded from [here](https://drive.google.com/file/d/1rvV5ItOUh4u8mmZU_Dp5KhQU-wVozKM3/view?usp=sharing) 
+(It'll be updated)
+
 We can set the thresholds of the segmentation and event spotting modules in `test.sh` bash shell scripts.
 
 ```shell script
