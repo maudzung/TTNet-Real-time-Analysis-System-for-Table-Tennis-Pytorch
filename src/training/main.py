@@ -158,7 +158,7 @@ def main_worker(gpu_idx, configs):
         if configs.lr_type == 'step_lr':
             lr_scheduler.step()
         elif configs.lr_type == 'plateau':
-            assert configs.no_val == True, "Only use plateau when having validation set"
+            assert (not configs.no_val), "Only use plateau when having validation set"
             lr_scheduler.step(val_loss)
 
         if not configs.no_val:
