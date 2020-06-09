@@ -27,7 +27,6 @@ class TTNet_Dataset(Dataset):
     def __getitem__(self, index):
         img_path_list, org_ball_pos_xy, event_name, seg_path = self.events_infor[index]
         event_class = self.events_dict[event_name]
-        # print('event_name: {}'.format(event_name))
         # Load segmentation
         seg_img = load_raw_img(seg_path)
 
@@ -36,8 +35,9 @@ class TTNet_Dataset(Dataset):
         for img_path_idx, img_path in enumerate(img_path_list):
             origin_imgs.append(load_raw_img(img_path))
 
-        origin_imgs = np.array(origin_imgs).transpose(1, 2, 0, 3) #(1080, 1920, 27)
-        origin_imgs = origin_imgs.reshape(origin_imgs.shape[0], origin_imgs.shape[1], -1) # (1080, 1920, 27)
+        origin_imgs = np.array(origin_imgs).transpose(1, 2, 0, 3)  # (9, 1080, 1920, 3) --> (1080, 1920, 9, 3)
+        # Considering make the reshape step faster!
+        origin_imgs = origin_imgs.reshape(origin_imgs.shape[0], origin_imgs.shape[1], -1)  # (1080, 1920, 27)
         # Apply augmentation
         if self.transform:
             origin_imgs, org_ball_pos_xy, seg_img = self.transform(origin_imgs, org_ball_pos_xy, seg_img)
