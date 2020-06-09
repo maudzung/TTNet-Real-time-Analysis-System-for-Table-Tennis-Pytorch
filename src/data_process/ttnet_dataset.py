@@ -32,14 +32,12 @@ class TTNet_Dataset(Dataset):
         seg_img = load_raw_img(seg_path)
 
         # Load list of images (-4, 4)
-        origin_imgs = None
+        origin_imgs = []
         for img_path_idx, img_path in enumerate(img_path_list):
-            img = load_raw_img(img_path)
-            if img_path_idx == 0:
-                origin_imgs = img
-            else:
-                origin_imgs = np.concatenate((origin_imgs, img), axis=-1)
+            origin_imgs.append(load_raw_img(img_path))
 
+        origin_imgs = np.array(origin_imgs).transpose(1, 2, 0, 3) #(1080, 1920, 27)
+        origin_imgs = origin_imgs.reshape(origin_imgs.shape[0], origin_imgs.shape[1], -1) # (1080, 1920, 27)
         # Apply augmentation
         if self.transform:
             origin_imgs, org_ball_pos_xy, seg_img = self.transform(origin_imgs, org_ball_pos_xy, seg_img)
