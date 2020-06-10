@@ -1,3 +1,14 @@
+"""
+# -*- coding: utf-8 -*-
+-----------------------------------------------------------------------------------
+# Author: Nguyen Mau Dung
+# DoC: 2020.06.10
+# email: nguyenmaudung93.kstn@gmail.com
+# project repo: https://github.com/maudzung/TTNet-Realtime-for-Table-Tennis-Pytorch
+-----------------------------------------------------------------------------------
+# Description: This script creates the video loader for testing with an input video
+"""
+
 import os
 from collections import deque
 
@@ -5,7 +16,9 @@ import cv2
 import numpy as np
 
 
-class TTNet_Video_Loader:  # for inference
+class TTNet_Video_Loader:
+    """The loader for demo with a video input"""
+
     def __init__(self, video_path, input_size=(320, 128), num_frames_sequence=9):
         assert os.path.isfile(video_path), "No video at {}".format(video_path)
         self.cap = cv2.VideoCapture(video_path)
@@ -53,7 +66,6 @@ class TTNet_Video_Loader:  # for inference
         origin_imgs = origin_imgs.transpose(2, 0, 1)
         resized_imgs = resized_imgs.transpose(2, 0, 1)
 
-        # cv2.imwrite(img_path + '.letterbox.jpg', 255 * img.transpose((1, 2, 0))[:, :, ::-1])  # save letterbox image
         return self.count, origin_imgs, resized_imgs
 
     def __len__(self):
@@ -61,8 +73,6 @@ class TTNet_Video_Loader:  # for inference
 
 
 if __name__ == '__main__':
-    import os
-    import cv2
     import time
 
     import matplotlib.pyplot as plt
