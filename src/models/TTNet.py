@@ -148,7 +148,7 @@ class Segmentation(nn.Module):
 
 
 class TTNet(nn.Module):
-    def __init__(self, dropout_p, tasks, input_size):
+    def __init__(self, dropout_p, tasks, input_size, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
         super(TTNet, self).__init__()
         self.tasks = tasks
         self.ball_local_stage, self.events_spotting, self.segmentation = None, None, None
@@ -161,6 +161,8 @@ class TTNet(nn.Module):
             self.segmentation = Segmentation()
         self.w_resize = input_size[0]
         self.h_resize = input_size[1]
+        self.mean = torch.repeat_interleave(torch.tensor(mean).view(1, 3, 1, 1), repeats=9, dim=1)
+        self.std = torch.repeat_interleave(torch.tensor(std).view(1, 3, 1, 1), repeats=9, dim=1)
 
     def forward(self, original_batch_input, resize_batch_input, org_ball_pos_xy):
         """Forward propagation
@@ -189,10 +191,8 @@ class TTNet(nn.Module):
 
         return pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy
 
-    def normalize(self, x, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
-        mean = torch.repeat_interleave(torch.tensor(mean).cuda().view(1, 3, 1, 1), repeats=9, dim=1)
-        std = torch.repeat_interleave(torch.tensor(std).cuda().view(1, 3, 1, 1), repeats=9, dim=1)
-        return (x / 255. - mean) / std
+    def normalize(self, x):
+        return (x / 255. - self.mean) / self.std
 
     def crop_original_batch(self, original_batch_input, resize_batch_input, pred_ball_global, org_ball_pos_xy):
         """Get input of the local stage by cropping the original images based on the ball position
