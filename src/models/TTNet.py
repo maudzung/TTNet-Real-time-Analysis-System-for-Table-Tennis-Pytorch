@@ -173,17 +173,17 @@ class TTNet(nn.Module):
         pred_ball_local, pred_events, pred_seg, local_ball_pos_xy = None, None, None, None
 
         # Normalize the input before compute forward propagation
-        resize_batch_input = self.normalize(resize_batch_input)
+        resize_batch_input = self.__normalize(resize_batch_input)
         pred_ball_global, global_features, out_block2, out_block3, out_block4, out_block5 = self.ball_global_stage(
             resize_batch_input)
         if self.ball_local_stage is not None:
             # Based on the prediction of the global stage, crop the original images
-            input_ball_local, cropped_params = self.crop_original_batch(original_batch_input, resize_batch_input,
-                                                                        pred_ball_global)
+            input_ball_local, cropped_params = self.__crop_original_batch(original_batch_input, resize_batch_input,
+                                                                          pred_ball_global)
             # Get the ground truth of the ball for the local stage
             local_ball_pos_xy = self.get_groundtruth_local_ball_pos(org_ball_pos_xy, cropped_params)
             # Normalize the input before compute forward propagation
-            input_ball_local = self.normalize(input_ball_local)
+            input_ball_local = self.__normalize(input_ball_local)
             pred_ball_local, local_features, *_ = self.ball_local_stage(input_ball_local)
             # Only consider the events spotting if the model has the local stage for ball detection
             if self.events_spotting is not None:
@@ -193,14 +193,30 @@ class TTNet(nn.Module):
 
         return pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy
 
-    def normalize(self, x):
+    def run_demo(self, original_batch_input, resize_batch_input):
+        """Only for full 4 stages/modules in TTNet"""
+
+        # Normalize the input before compute forward propagation
+        resize_batch_input = self.__normalize(resize_batch_input)
+        pred_ball_global, global_features, out_block2, out_block3, out_block4, out_block5 = self.ball_global_stage(
+            resize_batch_input)
+        input_ball_local, cropped_params = self.__crop_original_batch(original_batch_input, resize_batch_input,
+                                                                      pred_ball_global)
+        input_ball_local = self.__normalize(input_ball_local)
+        pred_ball_local, local_features, *_ = self.ball_local_stage(input_ball_local)
+        pred_events = self.events_spotting(global_features, local_features)
+        pred_seg = self.segmentation(out_block2, out_block3, out_block4, out_block5)
+
+        return pred_ball_global, pred_ball_local, pred_events, pred_seg
+
+    def __normalize(self, x):
         if not self.mean.is_cuda:
             self.mean = self.mean.cuda()
             self.std = self.std.cuda()
 
         return (x / 255. - self.mean) / self.std
 
-    def get_groundtruth_local_ball_pos(self, org_ball_pos_xy, cropped_params):
+    def __get_groundtruth_local_ball_pos(self, org_ball_pos_xy, cropped_params):
         local_ball_pos_xy = torch.zeros_like(org_ball_pos_xy)  # no grad for torch.zeros_like output
 
         for idx, params in enumerate(cropped_params):
@@ -220,7 +236,7 @@ class TTNet(nn.Module):
                 local_ball_pos_xy[idx, 1] = -1
         return local_ball_pos_xy
 
-    def crop_original_batch(self, original_batch_input, resize_batch_input, pred_ball_global):
+    def __crop_original_batch(self, original_batch_input, resize_batch_input, pred_ball_global):
         """Get input of the local stage by cropping the original images based on the predicted ball position
             of the global stage
         :param original_batch_input: (batch_size, 27, 1080, 1920)
@@ -257,8 +273,8 @@ class TTNet(nn.Module):
             x_center = int(x_center * w_ratio)
             y_center = int(y_center * h_ratio)
 
-            x_min, x_max, y_min, y_max = self.get_crop_params(x_center, y_center, self.w_resize, self.h_resize,
-                                                              w_original, h_original)
+            x_min, x_max, y_min, y_max = self.__get_crop_params(x_center, y_center, self.w_resize, self.h_resize,
+                                                                w_original, h_original)
             # Put image to the center
             h_crop = y_max - y_min
             w_crop = x_max - x_min
@@ -275,8 +291,7 @@ class TTNet(nn.Module):
 
         return input_ball_local, cropped_params
 
-    @staticmethod
-    def get_crop_params(x_center, y_center, w_resize, h_resize, w_original, h_original):
+    def __get_crop_params(self, x_center, y_center, w_resize, h_resize, w_original, h_original):
         x_min = max(0, x_center - int(w_resize / 2))
         y_min = max(0, y_center - int(h_resize / 2))
 
