@@ -58,3 +58,44 @@ class TTNet_Video_Loader:  # for inference
 
     def __len__(self):
         return self.video_num_frames - self.num_frames_sequence + 1  # number of sequences
+
+
+if __name__ == '__main__':
+    import os
+    import cv2
+    import time
+
+    import matplotlib.pyplot as plt
+    from config.config import parse_configs
+
+    configs = parse_configs()
+
+    video_path = os.path.join(configs.dataset_dir, 'test', 'videos', 'test_1.mp4')
+    video_loader = TTNet_Video_Loader(video_path, input_size=(320, 128),
+                                      num_frames_sequence=configs.num_frames_sequence)
+    out_images_dir = os.path.join(configs.working_dir, 'results', 'test_video_loader')
+    if not os.path.isdir(out_images_dir):
+        os.makedirs(out_images_dir)
+
+    fig, axes = plt.subplots(nrows=3, ncols=3, figsize=(20, 20))
+    axes = axes.ravel()
+
+    for example_index in range(1, 10):
+        print('process the sequence index: {}'.format(example_index))
+        start_time = time.time()
+        count, origin_imgs, resized_imgs = video_loader.__next__()
+        print('time to load sequence {}: {}'.format(example_index, time.time() - start_time))
+
+        origin_imgs = origin_imgs.transpose(1, 2, 0)
+        for i in range(configs.num_frames_sequence):
+            img = origin_imgs[:, :, (i * 3): (i + 1) * 3]
+            axes[i].imshow(img)
+            axes[i].set_title('image {}'.format(i))
+        plt.savefig(os.path.join(out_images_dir, 'org_all_imgs_{}.jpg'.format(example_index)))
+
+        resized_imgs = resized_imgs.transpose(1, 2, 0)
+        for i in range(configs.num_frames_sequence):
+            img = resized_imgs[:, :, (i * 3): (i + 1) * 3]
+            axes[i].imshow(img)
+            axes[i].set_title('image {}'.format(i))
+        plt.savefig(os.path.join(out_images_dir, 'augment_all_imgs_{}.jpg'.format(example_index)))
