@@ -61,10 +61,14 @@ class Unbalance_Loss_Model(nn.Module):
             event_loss = self.event_loss_criterion(pred_events, target_events)
             total_loss += event_loss * self.tasks_loss_weight[task_idx]
 
-
         if pred_seg is not None:
             task_idx += 1
             seg_loss = self.seg_loss_criterion(pred_seg, target_seg)
             total_loss += seg_loss * self.tasks_loss_weight[task_idx]
 
         return pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy, total_loss, None
+
+    def run_demo(self, original_batch_input, resize_batch_input):
+        pred_ball_global, pred_ball_local, pred_events, pred_seg = self.model.run_demo(original_batch_input,
+                                                                                       resize_batch_input)
+        return pred_ball_global, pred_ball_local, pred_events, pred_seg
