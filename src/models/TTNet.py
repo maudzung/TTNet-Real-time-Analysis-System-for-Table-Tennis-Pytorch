@@ -77,7 +77,7 @@ class BallDetection(nn.Module):
         features = self.convblock6(out_block5)
 
         x = self.dropout2d(features)
-        x = x.view(x.size(0), -1)
+        x = x.contiguous().view(x.size(0), -1)
 
         x = self.dropout1d(self.relu(self.fc1(x)))
         x = self.dropout1d(self.relu(self.fc2(x)))
@@ -107,7 +107,7 @@ class EventsSpotting(nn.Module):
         x = self.convblock(x)
         x = self.dropout2d(x)
 
-        x = x.view(x.size(0), -1)
+        x = x.contiguous().view(x.size(0), -1)
         x = self.relu(self.fc1(x))
         out = self.sigmoid(self.fc2(x))
 
@@ -148,7 +148,8 @@ class Segmentation(nn.Module):
 
 
 class TTNet(nn.Module):
-    def __init__(self, dropout_p, tasks, input_size, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
+    def __init__(self, dropout_p, tasks, input_size, thresh_ball_pos_mask, mean=(0.485, 0.456, 0.406),
+                 std=(0.229, 0.224, 0.225)):
         super(TTNet, self).__init__()
         self.tasks = tasks
         self.ball_local_stage, self.events_spotting, self.segmentation = None, None, None
@@ -161,6 +162,7 @@ class TTNet(nn.Module):
             self.segmentation = Segmentation()
         self.w_resize = input_size[0]
         self.h_resize = input_size[1]
+        self.thresh_ball_pos_mask = thresh_ball_pos_mask
         self.mean = torch.repeat_interleave(torch.tensor(mean).view(1, 3, 1, 1), repeats=9, dim=1)
         self.std = torch.repeat_interleave(torch.tensor(std).view(1, 3, 1, 1), repeats=9, dim=1)
 
@@ -181,7 +183,7 @@ class TTNet(nn.Module):
             input_ball_local, cropped_params = self.__crop_original_batch(original_batch_input, resize_batch_input,
                                                                           pred_ball_global)
             # Get the ground truth of the ball for the local stage
-            local_ball_pos_xy = self.get_groundtruth_local_ball_pos(org_ball_pos_xy, cropped_params)
+            local_ball_pos_xy = self.__get_groundtruth_local_ball_pos(org_ball_pos_xy, cropped_params)
             # Normalize the input before compute forward propagation
             input_ball_local = self.__normalize(input_ball_local)
             pred_ball_local, local_features, *_ = self.ball_local_stage(input_ball_local)
@@ -250,7 +252,7 @@ class TTNet(nn.Module):
         h_ratio = h_original / self.h_resize
         w_ratio = w_original / self.w_resize
         pred_ball_global_mask = pred_ball_global.data
-        pred_ball_global_mask[pred_ball_global_mask < 0.01] = 0.
+        pred_ball_global_mask[pred_ball_global_mask < self.thresh_ball_pos_mask] = 0.
 
         # Crop the original images
         input_ball_local = torch.zeros_like(resize_batch_input)  # same shape with resize_batch_input, no grad
@@ -305,7 +307,7 @@ if __name__ == '__main__':
     from torchsummary import summary
 
     tasks = ['global', 'local', 'event', 'seg']
-    ttnet = TTNet(dropout_p=0.5, tasks=tasks, input_size=(320, 128)).cuda()
+    ttnet = TTNet(dropout_p=0.5, tasks=tasks, input_size=(320, 128), thresh_ball_pos_mask=0.01).cuda()
     resize_batch_input = torch.rand((10, 27, 128, 320)).cuda()
     original_batch_input = torch.rand((10, 27, 1080, 1920)).cuda()
     org_ball_pos_xy = torch.rand((10, 2)).cuda()
