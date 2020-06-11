@@ -1,3 +1,14 @@
+"""
+# -*- coding: utf-8 -*-
+-----------------------------------------------------------------------------------
+# Author: Nguyen Mau Dung
+# DoC: 2020.05.21
+# email: nguyenmaudung93.kstn@gmail.com
+# project repo: https://github.com/maudzung/TTNet-Realtime-for-Table-Tennis-Pytorch
+-----------------------------------------------------------------------------------
+# Description: The configurations of the project will be defined here
+"""
+
 import torch
 import os
 import datetime
@@ -147,6 +158,18 @@ def parse_configs():
     parser.add_argument('--save_test_output', action='store_true',
                         help='If true, the image of testing phase will be saved')
 
+    ####################################################################
+    ##############     Demonstration configurations     ###################
+    ####################################################################
+    parser.add_argument('--video_path', type=str, default=None, metavar='PATH',
+                        help='the path of the video that needs to demo')
+    parser.add_argument('--output_format', type=str, default='text', metavar='PATH',
+                        help='the type of the demo output')
+    parser.add_argument('--show_image', action='store_true',
+                        help='If true, show the image during demostration')
+    parser.add_argument('--save_demo_output', action='store_true',
+                        help='If true, the image of demonstration phase will be saved')
+
     configs = edict(vars(parser.parse_args()))
 
     ####################################################################
@@ -234,6 +257,10 @@ def parse_configs():
     if configs.save_test_output:
         configs.saved_dir = os.path.join(configs.results_dir, configs.saved_fn)
         make_folder(configs.saved_dir)
+
+    if configs.save_demo_output:
+        configs.save_demo_dir = os.path.join(configs.results_dir, 'demo', configs.saved_fn)
+        make_folder(configs.save_demo_dir)
 
     return configs
 
