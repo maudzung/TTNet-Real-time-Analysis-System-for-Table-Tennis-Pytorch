@@ -18,6 +18,7 @@ from training.train_utils import get_model, load_pretrained_model
 from training.train_utils import make_data_parallel, get_num_parameters
 from utils.misc import AverageMeter
 from config.config import parse_configs
+from inference.post_processing import get_prediction_ball_pos, get_prediction_seg, prediction_get_events
 
 
 def main():
@@ -83,6 +84,7 @@ def test(test_loader, model, configs):
 
     w_original = 1920.
     h_original = 1080.
+    w, h = configs.input_size
 
     # switch to evaluate mode
     model.eval()
@@ -106,43 +108,33 @@ def test(test_loader, model, configs):
             else:
                 pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy, total_loss, _ = model(
                     None, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg)
-            # Transfer output to cpu
-            pred_ball_global = pred_ball_global.cpu().numpy()
-            global_ball_pos_xy = global_ball_pos_xy.numpy()
-            if pred_ball_local is not None:
-                pred_ball_local = pred_ball_local.cpu().numpy()
-                local_ball_pos_xy = local_ball_pos_xy.cpu().numpy()  # Ground truth of the local stage
-            if pred_events is not None:
-                pred_events = pred_events.cpu().numpy()
-            if pred_seg is not None:
-                pred_seg = pred_seg.cpu().numpy()
-                target_seg = target_seg.cpu().numpy()
-
             org_ball_pos_xy = org_ball_pos_xy.numpy()
+            global_ball_pos_xy = global_ball_pos_xy.numpy()
+            # Transfer output to cpu
+            target_seg = target_seg.cpu().numpy()
+            local_ball_pos_xy = local_ball_pos_xy.cpu().numpy()  # Ground truth of the local stage
 
             for sample_idx in range(batch_size):
-                w, h = configs.input_size
                 # Get target
                 sample_org_ball_pos_xy = org_ball_pos_xy[sample_idx]
                 sample_global_ball_pos_xy = global_ball_pos_xy[sample_idx]  # Target
                 # Process the global stage
                 sample_pred_ball_global = pred_ball_global[sample_idx]
-                sample_pred_ball_global[sample_pred_ball_global < configs.thresh_ball_pos_mask] = 0.
-                sample_pred_ball_global_x = np.argmax(sample_pred_ball_global[:w])
-                sample_pred_ball_global_y = np.argmax(sample_pred_ball_global[w:])
+                sample_prediction_ball_global_xy = get_prediction_ball_pos(sample_pred_ball_global, w,
+                                                                           configs.thresh_ball_pos_mask)
 
                 # Calculate the MSE
                 if (sample_global_ball_pos_xy[0] > 0) and (sample_global_ball_pos_xy[1] > 0):
-                    mse = (sample_pred_ball_global_x - sample_global_ball_pos_xy[0]) ** 2 + (
-                            sample_pred_ball_global_y - sample_global_ball_pos_xy[1]) ** 2
+                    mse = (sample_prediction_ball_global_xy[0] - sample_global_ball_pos_xy[0]) ** 2 + (
+                            sample_prediction_ball_global_xy[1] - sample_global_ball_pos_xy[1]) ** 2
                     mse_global.update(mse)
 
                 print('\nBall Detection - \t Global stage: \t (x, y) - gt = ({}, {}), prediction = ({}, {})'.format(
-                    sample_global_ball_pos_xy[0], sample_global_ball_pos_xy[1], sample_pred_ball_global_x,
-                    sample_pred_ball_global_y))
+                    sample_global_ball_pos_xy[0], sample_global_ball_pos_xy[1], sample_prediction_ball_global_xy[0],
+                    sample_prediction_ball_global_xy[1]))
 
-                sample_pred_org_x = sample_pred_ball_global_x * (w_original / w)
-                sample_pred_org_y = sample_pred_ball_global_y * (h_original / h)
+                sample_pred_org_x = sample_prediction_ball_global_xy[0] * (w_original / w)
+                sample_pred_org_y = sample_prediction_ball_global_xy[1] * (h_original / h)
 
                 # Process local ball stage
                 if pred_ball_local is not None:
@@ -150,21 +142,20 @@ def test(test_loader, model, configs):
                     sample_local_ball_pos_xy = local_ball_pos_xy[sample_idx]  # Target
                     # Process the local stage
                     sample_pred_ball_local = pred_ball_local[sample_idx]
-                    sample_pred_ball_local[sample_pred_ball_local < configs.thresh_ball_pos_mask] = 0.
-                    sample_pred_ball_local_x = np.argmax(sample_pred_ball_local[:w])
-                    sample_pred_ball_local_y = np.argmax(sample_pred_ball_local[w:])
+                    sample_prediction_ball_local_xy = get_prediction_ball_pos(sample_pred_ball_local, w,
+                                                                              configs.thresh_ball_pos_mask)
 
                     # Calculate the MSE
                     if (sample_local_ball_pos_xy[0] > 0) and (sample_local_ball_pos_xy[1] > 0):
-                        mse = (sample_pred_ball_local_x - sample_local_ball_pos_xy[0]) ** 2 + (
-                                sample_pred_ball_local_y - sample_local_ball_pos_xy[1]) ** 2
+                        mse = (sample_prediction_ball_local_xy[0] - sample_local_ball_pos_xy[0]) ** 2 + (
+                                sample_prediction_ball_local_xy[1] - sample_local_ball_pos_xy[1]) ** 2
                         mse_local.update(mse)
-                        sample_pred_org_x += sample_pred_ball_local_x - w / 2
-                        sample_pred_org_y += sample_pred_ball_local_y - h / 2
+                        sample_pred_org_x += sample_prediction_ball_local_xy[0] - w / 2
+                        sample_pred_org_y += sample_prediction_ball_local_xy[1] - h / 2
 
                     print('Ball Detection - \t Local stage: \t (x, y) - gt = ({}, {}), prediction = ({}, {})'.format(
-                        sample_local_ball_pos_xy[0], sample_local_ball_pos_xy[1], sample_pred_ball_local_x,
-                        sample_pred_ball_local_y))
+                        sample_local_ball_pos_xy[0], sample_local_ball_pos_xy[1], sample_prediction_ball_local_xy[0],
+                        sample_prediction_ball_local_xy[1]))
 
                 print('Ball Detection - \t Overall: \t (x, y) - org: ({}, {}), prediction = ({}, {})'.format(
                     sample_org_ball_pos_xy[0], sample_org_ball_pos_xy[1], int(sample_pred_org_x),
@@ -176,30 +167,26 @@ def test(test_loader, model, configs):
                     vec_sample_target_event = np.zeros((2,), dtype=np.int)
                     if sample_target_event < 2:
                         vec_sample_target_event[sample_target_event] = 1
-                    sample_pred_event = (pred_events[sample_idx] > configs.event_thresh).astype(np.int)
+                    sample_prediction_events = prediction_get_events(pred_events[sample_idx], configs.event_thresh)
                     print(
                         'Event Spotting - \t gt = (is bounce: {}, is net: {}), prediction: (is bounce: {:.4f}, is net: {:.4f})'.format(
                             vec_sample_target_event[0], vec_sample_target_event[1], pred_events[sample_idx][0],
                             pred_events[sample_idx][1]))
-                    diff = sample_pred_event - vec_sample_target_event
+                    diff = sample_prediction_events - vec_sample_target_event
                     # Check correct or not
-                    if np.sum(diff) != 0:
-                        # Incorrect
+                    if np.sum(diff) != 0:  # Incorrect
                         acc_event.update(0)
-                    else:
-                        # Correct
+                    else:  # Correct
                         acc_event.update(1)
 
                 # Process segmentation stage
                 if pred_seg is not None:
-                    sample_target_seg = target_seg[sample_idx].transpose(1, 2, 0)
-                    sample_pred_seg = pred_seg[sample_idx].transpose(1, 2, 0)
-                    sample_target_seg = sample_target_seg.astype(np.int)
-                    sample_pred_seg = (sample_pred_seg > configs.seg_thresh).astype(np.int)
+                    sample_target_seg = target_seg[sample_idx].transpose(1, 2, 0).astype(np.int)
+                    sample_prediction_seg = get_prediction_seg(pred_seg[sample_idx], configs.seg_thresh)
 
                     # Calculate the IoU
-                    iou = 2 * np.sum(sample_target_seg * sample_pred_seg) / (
-                            np.sum(sample_target_seg) + np.sum(sample_pred_seg) + 1e-9)
+                    iou = 2 * np.sum(sample_target_seg * sample_prediction_seg) / (
+                            np.sum(sample_target_seg) + np.sum(sample_prediction_seg) + 1e-9)
                     iou_seg.update(iou)
 
                     print('Segmentation - \t \t IoU = {:.4f}'.format(iou))
@@ -209,15 +196,15 @@ def test(test_loader, model, configs):
                         plt.tight_layout()
                         axes.ravel()
                         axes[2 * sample_idx].imshow(sample_target_seg * 255)
-                        axes[2 * sample_idx + 1].imshow(sample_pred_seg * 255)
+                        axes[2 * sample_idx + 1].imshow(sample_prediction_seg * 255)
                         # title
                         target_title = 'target seg'
                         pred_title = 'pred seg'
                         if pred_events is not None:
                             target_title += ', is bounce: {}, is net: {}'.format(vec_sample_target_event[0],
                                                                                  vec_sample_target_event[1])
-                            pred_title += ', is bounce: {}, is net: {}'.format(sample_pred_event[0],
-                                                                               sample_pred_event[1])
+                            pred_title += ', is bounce: {}, is net: {}'.format(sample_prediction_events[0],
+                                                                               sample_prediction_events[1])
 
                         axes[2 * sample_idx].set_title(target_title)
                         axes[2 * sample_idx + 1].set_title(pred_title)
@@ -226,15 +213,18 @@ def test(test_loader, model, configs):
                                                  'batch_idx_{}_sample_idx_{}.jpg'.format(batch_idx, sample_idx)))
 
             if ((batch_idx + 1) % configs.print_freq) == 0:
-                print('batch_idx: {} - Average acc_event: {:.4f}, iou_seg: {:.4f}, mse_global: {:.1f}, mse_local: {:.1f}'.format(
-                    batch_idx, acc_event.avg, iou_seg.avg, mse_global.avg, mse_local.avg))
+                print(
+                    'batch_idx: {} - Average acc_event: {:.4f}, iou_seg: {:.4f}, mse_global: {:.1f}, mse_local: {:.1f}'.format(
+                        batch_idx, acc_event.avg, iou_seg.avg, mse_global.avg, mse_local.avg))
 
             batch_time.update(time.time() - start_time)
 
             start_time = time.time()
 
-    print('Average acc_event: {:.4f}, iou_seg: {:.4f}, mse_global: {:.1f}, mse_local: {:.1f}'.format(acc_event.avg, iou_seg.avg,
-                                                                                     mse_global.avg, mse_local.avg))
+    print('Average acc_event: {:.4f}, iou_seg: {:.4f}, mse_global: {:.1f}, mse_local: {:.1f}'.format(acc_event.avg,
+                                                                                                     iou_seg.avg,
+                                                                                                     mse_global.avg,
+                                                                                                     mse_local.avg))
     print('Done testing')
 
 
