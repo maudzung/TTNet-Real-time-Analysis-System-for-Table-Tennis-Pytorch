@@ -1,3 +1,14 @@
+"""
+# -*- coding: utf-8 -*-
+-----------------------------------------------------------------------------------
+# Author: Nguyen Mau Dung
+# DoC: 2020.06.10
+# email: nguyenmaudung93.kstn@gmail.com
+# project repo: https://github.com/maudzung/TTNet-Realtime-for-Table-Tennis-Pytorch
+-----------------------------------------------------------------------------------
+# Description: This script for transformations of images, segmentation, and ball positions
+"""
+
 import random
 
 import cv2
@@ -43,7 +54,7 @@ class Denormalize():
 
 
 class Resize(object):
-    def __init__(self, new_size, p=0.5, interpolation=cv2.INTER_CUBIC):
+    def __init__(self, new_size, p=0.5, interpolation=cv2.INTER_LINEAR):
         self.new_size = new_size
         self.p = p
         self.interpolation = interpolation
@@ -63,7 +74,7 @@ class Resize(object):
 
 
 class Random_Crop(object):
-    def __init__(self, max_reduction_percent=0.15, p=0.5, interpolation=cv2.INTER_CUBIC):
+    def __init__(self, max_reduction_percent=0.15, p=0.5, interpolation=cv2.INTER_LINEAR):
         self.max_reduction_percent = max_reduction_percent
         self.p = p
         self.interpolation = interpolation
@@ -137,9 +148,9 @@ class Random_HFlip(object):
         if random.random() <= self.p:
             h, w, c = imgs.shape
             # Horizontal flip a sequence of imgs
-            imgs = cv2.flip(imgs, 1)
+            imgs = imgs[:, ::-1, :]
             # Horizontal flip seg_img
-            seg_img = cv2.flip(seg_img, 1)
+            seg_img = seg_img[:, ::-1, :]
 
             # Adjust ball position: Same y, new x = w - x
             ball_position_xy = [w - ball_position_xy[0], ball_position_xy[1]]
