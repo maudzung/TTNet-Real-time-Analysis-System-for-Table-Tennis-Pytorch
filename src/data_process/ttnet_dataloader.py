@@ -1,3 +1,14 @@
+"""
+# -*- coding: utf-8 -*-
+-----------------------------------------------------------------------------------
+# Author: Nguyen Mau Dung
+# DoC: 2020.05.21
+# email: nguyenmaudung93.kstn@gmail.com
+# project repo: https://github.com/maudzung/TTNet-Realtime-for-Table-Tennis-Pytorch
+-----------------------------------------------------------------------------------
+# Description: This script for creating the dataloader for training/validation/test phase
+"""
+
 import sys
 
 import torch
