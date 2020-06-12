@@ -57,9 +57,7 @@ class TTNet_Video_Loader:
         ret, frame = self.cap.read()  # BGR
         assert ret, 'Failed to load frame {:d}'.format(self.count)
         self.images_sequence.append(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-        origin_imgs = np.array(self.images_sequence).transpose(1, 2, 0, 3)  # (9, 1080, 1920, 3) --> (1080, 1920, 9, 3)
-        # Considering make the reshape step faster!
-        origin_imgs = origin_imgs.reshape(origin_imgs.shape[0], origin_imgs.shape[1], -1)  # (1080, 1920, 27)
+        origin_imgs = np.dstack(self.images_sequence)  # (1080, 1920, 27)
         resized_imgs = cv2.resize(origin_imgs, (self.width, self.height))
 
         # Transpose (H, W, C) to (C, H, W) --> fit input of TTNet model
