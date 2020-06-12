@@ -22,14 +22,8 @@ from data_process.transformation import Compose, Random_Crop, Resize, Normalize,
 
 
 def create_train_val_dataloader(configs):
-    """
-    Create dataloader for training and validate
-    Args:
-        configs:
+    """Create dataloader for training and validate"""
 
-    Returns:
-
-    """
     train_transform = Compose([
         Random_Crop(max_reduction_percent=0.15, p=1.),
         Random_HFlip(p=0.5),
@@ -64,14 +58,8 @@ def create_train_val_dataloader(configs):
 
 
 def create_test_dataloader(configs):
-    """
-    Create dataloader for testing phase
-    Args:
-        configs:
+    """Create dataloader for testing phase"""
 
-    Returns:
-
-    """
     test_transform = None
     resize_transform = Resize(new_size=tuple(configs.input_size), p=1.0)
 
