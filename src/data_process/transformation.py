@@ -148,9 +148,9 @@ class Random_HFlip(object):
         if random.random() <= self.p:
             h, w, c = imgs.shape
             # Horizontal flip a sequence of imgs
-            imgs = imgs[:, ::-1, :]
+            imgs = cv2.flip(imgs, 1)
             # Horizontal flip seg_img
-            seg_img = seg_img[:, ::-1, :]
+            seg_img = cv2.flip(seg_img, 1)
 
             # Adjust ball position: Same y, new x = w - x
             ball_position_xy = [w - ball_position_xy[0], ball_position_xy[1]]
