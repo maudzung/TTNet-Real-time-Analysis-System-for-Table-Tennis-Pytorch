@@ -1,3 +1,14 @@
+"""
+# -*- coding: utf-8 -*-
+-----------------------------------------------------------------------------------
+# Author: Nguyen Mau Dung
+# DoC: 2020.05.21
+# email: nguyenmaudung93.kstn@gmail.com
+# project repo: https://github.com/maudzung/TTNet-Realtime-for-Table-Tennis-Pytorch
+-----------------------------------------------------------------------------------
+# Description: The multi-task learning model that train with learnt weights of losses
+"""
+
 import sys
 
 import torch
@@ -75,3 +86,8 @@ class Multi_Task_Learning_Model(nn.Module):
         # Final weights: [math.exp(log_var) ** 0.5 for log_var in log_vars]
 
         return pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy, total_loss, self.log_vars.data.tolist()
+
+    def run_demo(self, original_batch_input, resize_batch_input):
+        pred_ball_global, pred_ball_local, pred_events, pred_seg = self.model.run_demo(original_batch_input,
+                                                                                       resize_batch_input)
+        return pred_ball_global, pred_ball_local, pred_events, pred_seg

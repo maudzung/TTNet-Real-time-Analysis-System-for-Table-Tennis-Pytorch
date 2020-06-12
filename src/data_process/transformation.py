@@ -1,3 +1,14 @@
+"""
+# -*- coding: utf-8 -*-
+-----------------------------------------------------------------------------------
+# Author: Nguyen Mau Dung
+# DoC: 2020.06.10
+# email: nguyenmaudung93.kstn@gmail.com
+# project repo: https://github.com/maudzung/TTNet-Realtime-for-Table-Tennis-Pytorch
+-----------------------------------------------------------------------------------
+# Description: This script for transformations of images, segmentation, and ball positions
+"""
+
 import random
 
 import cv2
@@ -43,7 +54,7 @@ class Denormalize():
 
 
 class Resize(object):
-    def __init__(self, new_size, p=0.5, interpolation=cv2.INTER_CUBIC):
+    def __init__(self, new_size, p=0.5, interpolation=cv2.INTER_LINEAR):
         self.new_size = new_size
         self.p = p
         self.interpolation = interpolation
@@ -63,7 +74,7 @@ class Resize(object):
 
 
 class Random_Crop(object):
-    def __init__(self, max_reduction_percent=0.15, p=0.5, interpolation=cv2.INTER_CUBIC):
+    def __init__(self, max_reduction_percent=0.15, p=0.5, interpolation=cv2.INTER_LINEAR):
         self.max_reduction_percent = max_reduction_percent
         self.p = p
         self.interpolation = interpolation

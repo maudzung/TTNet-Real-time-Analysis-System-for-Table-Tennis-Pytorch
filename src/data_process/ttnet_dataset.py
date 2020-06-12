@@ -1,3 +1,14 @@
+"""
+# -*- coding: utf-8 -*-
+-----------------------------------------------------------------------------------
+# Author: Nguyen Mau Dung
+# DoC: 2020.05.21
+# email: nguyenmaudung93.kstn@gmail.com
+# project repo: https://github.com/maudzung/TTNet-Realtime-for-Table-Tennis-Pytorch
+-----------------------------------------------------------------------------------
+# Description: The script for loading TTNet dataset
+"""
+
 import sys
 import os
 import numpy as np
@@ -34,10 +45,9 @@ class TTNet_Dataset(Dataset):
         origin_imgs = []
         for img_path_idx, img_path in enumerate(img_path_list):
             origin_imgs.append(load_raw_img(img_path))
+        # loading process faster 3 times with np.dstack() function
+        origin_imgs = np.dstack(origin_imgs)  # (1080, 1920, 27)
 
-        origin_imgs = np.array(origin_imgs).transpose(1, 2, 0, 3)  # (9, 1080, 1920, 3) --> (1080, 1920, 9, 3)
-        # Considering make the reshape step faster!
-        origin_imgs = origin_imgs.reshape(origin_imgs.shape[0], origin_imgs.shape[1], -1)  # (1080, 1920, 27)
         # Apply augmentation
         if self.transform:
             origin_imgs, org_ball_pos_xy, seg_img = self.transform(origin_imgs, org_ball_pos_xy, seg_img)

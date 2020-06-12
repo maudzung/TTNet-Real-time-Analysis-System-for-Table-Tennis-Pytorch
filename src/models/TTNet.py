@@ -1,3 +1,14 @@
+"""
+# -*- coding: utf-8 -*-
+-----------------------------------------------------------------------------------
+# Author: Nguyen Mau Dung
+# DoC: 2020.05.21
+# email: nguyenmaudung93.kstn@gmail.com
+# project repo: https://github.com/maudzung/TTNet-Realtime-for-Table-Tennis-Pytorch
+-----------------------------------------------------------------------------------
+# Description: The TTNet model
+"""
+
 import torch
 import torch.nn as nn
 
@@ -77,7 +88,7 @@ class BallDetection(nn.Module):
         features = self.convblock6(out_block5)
 
         x = self.dropout2d(features)
-        x = x.view(x.size(0), -1)
+        x = x.contiguous().view(x.size(0), -1)
 
         x = self.dropout1d(self.relu(self.fc1(x)))
         x = self.dropout1d(self.relu(self.fc2(x)))
@@ -107,7 +118,7 @@ class EventsSpotting(nn.Module):
         x = self.convblock(x)
         x = self.dropout2d(x)
 
-        x = x.view(x.size(0), -1)
+        x = x.contiguous().view(x.size(0), -1)
         x = self.relu(self.fc1(x))
         out = self.sigmoid(self.fc2(x))
 
@@ -148,7 +159,8 @@ class Segmentation(nn.Module):
 
 
 class TTNet(nn.Module):
-    def __init__(self, dropout_p, tasks, input_size):
+    def __init__(self, dropout_p, tasks, input_size, thresh_ball_pos_mask, mean=(0.485, 0.456, 0.406),
+                 std=(0.229, 0.224, 0.225)):
         super(TTNet, self).__init__()
         self.tasks = tasks
         self.ball_local_stage, self.events_spotting, self.segmentation = None, None, None
@@ -161,6 +173,9 @@ class TTNet(nn.Module):
             self.segmentation = Segmentation()
         self.w_resize = input_size[0]
         self.h_resize = input_size[1]
+        self.thresh_ball_pos_mask = thresh_ball_pos_mask
+        self.mean = torch.repeat_interleave(torch.tensor(mean).view(1, 3, 1, 1), repeats=9, dim=1)
+        self.std = torch.repeat_interleave(torch.tensor(std).view(1, 3, 1, 1), repeats=9, dim=1)
 
     def forward(self, original_batch_input, resize_batch_input, org_ball_pos_xy):
         """Forward propagation
@@ -171,15 +186,17 @@ class TTNet(nn.Module):
         pred_ball_local, pred_events, pred_seg, local_ball_pos_xy = None, None, None, None
 
         # Normalize the input before compute forward propagation
-        resize_batch_input = self.normalize(resize_batch_input)
+        resize_batch_input = self.__normalize(resize_batch_input)
         pred_ball_global, global_features, out_block2, out_block3, out_block4, out_block5 = self.ball_global_stage(
             resize_batch_input)
         if self.ball_local_stage is not None:
             # Based on the prediction of the global stage, crop the original images
-            input_ball_local, local_ball_pos_xy = self.crop_original_batch(original_batch_input, resize_batch_input,
-                                                                           pred_ball_global, org_ball_pos_xy)
+            input_ball_local, cropped_params = self.__crop_original_batch(original_batch_input, resize_batch_input,
+                                                                          pred_ball_global)
+            # Get the ground truth of the ball for the local stage
+            local_ball_pos_xy = self.__get_groundtruth_local_ball_pos(org_ball_pos_xy, cropped_params)
             # Normalize the input before compute forward propagation
-            input_ball_local = self.normalize(input_ball_local)
+            input_ball_local = self.__normalize(input_ball_local)
             pred_ball_local, local_features, *_ = self.ball_local_stage(input_ball_local)
             # Only consider the events spotting if the model has the local stage for ball detection
             if self.events_spotting is not None:
@@ -189,13 +206,52 @@ class TTNet(nn.Module):
 
         return pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy
 
-    def normalize(self, x, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
-        mean = torch.repeat_interleave(torch.tensor(mean).cuda().view(1, 3, 1, 1), repeats=9, dim=1)
-        std = torch.repeat_interleave(torch.tensor(std).cuda().view(1, 3, 1, 1), repeats=9, dim=1)
-        return (x / 255. - mean) / std
+    def run_demo(self, original_batch_input, resize_batch_input):
+        """Only for full 4 stages/modules in TTNet"""
 
-    def crop_original_batch(self, original_batch_input, resize_batch_input, pred_ball_global, org_ball_pos_xy):
-        """Get input of the local stage by cropping the original images based on the ball position
+        # Normalize the input before compute forward propagation
+        resize_batch_input = self.__normalize(resize_batch_input)
+        pred_ball_global, global_features, out_block2, out_block3, out_block4, out_block5 = self.ball_global_stage(
+            resize_batch_input)
+        input_ball_local, cropped_params = self.__crop_original_batch(original_batch_input, resize_batch_input,
+                                                                      pred_ball_global)
+        input_ball_local = self.__normalize(input_ball_local)
+        pred_ball_local, local_features, *_ = self.ball_local_stage(input_ball_local)
+        pred_events = self.events_spotting(global_features, local_features)
+        pred_seg = self.segmentation(out_block2, out_block3, out_block4, out_block5)
+
+        return pred_ball_global, pred_ball_local, pred_events, pred_seg
+
+    def __normalize(self, x):
+        if not self.mean.is_cuda:
+            self.mean = self.mean.cuda()
+            self.std = self.std.cuda()
+
+        return (x / 255. - self.mean) / self.std
+
+    def __get_groundtruth_local_ball_pos(self, org_ball_pos_xy, cropped_params):
+        local_ball_pos_xy = torch.zeros_like(org_ball_pos_xy)  # no grad for torch.zeros_like output
+
+        for idx, params in enumerate(cropped_params):
+            is_ball_detected, x_min, x_max, y_min, y_max, x_pad, y_pad = params
+
+            if is_ball_detected:
+                # Get the local ball position based on the crop image informaion
+                local_ball_pos_xy[idx, 0] = max(org_ball_pos_xy[idx, 0] - x_min + x_pad, -1)
+                local_ball_pos_xy[idx, 1] = max(org_ball_pos_xy[idx, 1] - y_min + y_pad, -1)
+                # If the ball is outside of the cropped image --> set position to -1, -1 --> No ball
+                if (local_ball_pos_xy[idx, 0] >= self.w_resize) or (local_ball_pos_xy[idx, 1] >= self.h_resize) or (
+                        local_ball_pos_xy[idx, 0] < 0) or (local_ball_pos_xy[idx, 1] < 0):
+                    local_ball_pos_xy[idx, 0] = -1
+                    local_ball_pos_xy[idx, 1] = -1
+            else:
+                local_ball_pos_xy[idx, 0] = -1
+                local_ball_pos_xy[idx, 1] = -1
+        return local_ball_pos_xy
+
+    def __crop_original_batch(self, original_batch_input, resize_batch_input, pred_ball_global):
+        """Get input of the local stage by cropping the original images based on the predicted ball position
+            of the global stage
         :param original_batch_input: (batch_size, 27, 1080, 1920)
         :param resize_batch_input: (batch_size, 27, 128, 320)
         :param pred_ball_global: (batch_size, 448)
@@ -203,16 +259,16 @@ class TTNet(nn.Module):
         :return: input_ball_local (batch_size, 27, 128, 320)
         """
         # Process input for local stage based on output of the global one
-        b_size, _, h_original, w_original = original_batch_input.size()
+        batch_size, _, h_original, w_original = original_batch_input.size()
         h_ratio = h_original / self.h_resize
         w_ratio = w_original / self.w_resize
         pred_ball_global_mask = pred_ball_global.data
-        pred_ball_global_mask[pred_ball_global_mask < 0.01] = 0.
+        pred_ball_global_mask[pred_ball_global_mask < self.thresh_ball_pos_mask] = 0.
 
         # Crop the original images
-        input_ball_local = torch.zeros_like(resize_batch_input)  # same shape with resize_batch_input
-        local_ball_pos_xy = torch.zeros_like(org_ball_pos_xy)
-        for idx in range(b_size):
+        input_ball_local = torch.zeros_like(resize_batch_input)  # same shape with resize_batch_input, no grad
+        cropped_params = []
+        for idx in range(batch_size):
             pred_ball_pos_x = pred_ball_global_mask[idx, :self.w_resize]
             pred_ball_pos_y = pred_ball_global_mask[idx, self.w_resize:]
             # If the ball is not detected, we crop the center of the images, set ball_poss to [-1, -1]
@@ -230,8 +286,8 @@ class TTNet(nn.Module):
             x_center = int(x_center * w_ratio)
             y_center = int(y_center * h_ratio)
 
-            x_min, x_max, y_min, y_max = self.get_crop_params(x_center, y_center, self.w_resize, self.h_resize,
-                                                              w_original, h_original)
+            x_min, x_max, y_min, y_max = self.__get_crop_params(x_center, y_center, self.w_resize, self.h_resize,
+                                                                w_original, h_original)
             # Put image to the center
             h_crop = y_max - y_min
             w_crop = x_max - x_min
@@ -244,23 +300,11 @@ class TTNet(nn.Module):
                                                                                            y_min:y_max, x_min: x_max]
             else:
                 input_ball_local[idx, :, :, :] = original_batch_input[idx, :, y_min:y_max, x_min: x_max]
+            cropped_params.append([is_ball_detected, x_min, x_max, y_min, y_max, x_pad, y_pad])
 
-            if is_ball_detected:
-                # Get the local ball position based on the crop image informaion
-                local_ball_pos_xy[idx, 0] = max(org_ball_pos_xy[idx, 0] - x_min + x_pad, -1)
-                local_ball_pos_xy[idx, 1] = max(org_ball_pos_xy[idx, 1] - y_min + y_pad, -1)
-                # If the ball is outside of the cropped image --> set position to -1, -1 --> No ball
-                if (local_ball_pos_xy[idx, 0] >= self.w_resize) or (local_ball_pos_xy[idx, 1] >= self.h_resize) or (
-                        local_ball_pos_xy[idx, 0] < 0) or (local_ball_pos_xy[idx, 1] < 0):
-                    local_ball_pos_xy[idx, 0] = -1
-                    local_ball_pos_xy[idx, 1] = -1
-            else:
-                local_ball_pos_xy[idx, 0] = -1
-                local_ball_pos_xy[idx, 1] = -1
-        return input_ball_local, local_ball_pos_xy
+        return input_ball_local, cropped_params
 
-    @staticmethod
-    def get_crop_params(x_center, y_center, w_resize, h_resize, w_original, h_original):
+    def __get_crop_params(self, x_center, y_center, w_resize, h_resize, w_original, h_original):
         x_min = max(0, x_center - int(w_resize / 2))
         y_min = max(0, y_center - int(h_resize / 2))
 
@@ -274,7 +318,7 @@ if __name__ == '__main__':
     from torchsummary import summary
 
     tasks = ['global', 'local', 'event', 'seg']
-    ttnet = TTNet(dropout_p=0.5, tasks=tasks, input_size=(320, 128)).cuda()
+    ttnet = TTNet(dropout_p=0.5, tasks=tasks, input_size=(320, 128), thresh_ball_pos_mask=0.01).cuda()
     resize_batch_input = torch.rand((10, 27, 128, 320)).cuda()
     original_batch_input = torch.rand((10, 27, 1080, 1920)).cuda()
     org_ball_pos_xy = torch.rand((10, 2)).cuda()

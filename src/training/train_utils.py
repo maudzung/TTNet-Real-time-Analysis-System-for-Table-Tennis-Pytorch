@@ -1,3 +1,14 @@
+"""
+# -*- coding: utf-8 -*-
+-----------------------------------------------------------------------------------
+# Author: Nguyen Mau Dung
+# DoC: 2020.05.21
+# email: nguyenmaudung93.kstn@gmail.com
+# project repo: https://github.com/maudzung/TTNet-Realtime-for-Table-Tennis-Pytorch
+-----------------------------------------------------------------------------------
+# Description: utils functions that use for training process
+"""
+
 import torch
 import sys
 import copy
@@ -22,7 +33,8 @@ def get_model(configs):
 
     """
     if configs.arch == 'ttnet':
-        ttnet_model = TTNet(dropout_p=configs.dropout_p, tasks=configs.tasks, input_size=configs.input_size)
+        ttnet_model = TTNet(dropout_p=configs.dropout_p, tasks=configs.tasks, input_size=configs.input_size,
+                            thresh_ball_pos_mask=configs.thresh_ball_pos_mask)
     else:
         assert False, 'Undefined model backbone'
 
@@ -133,7 +145,8 @@ def make_data_parallel(model, configs):
             # ourselves based on the total number of GPUs we have
             configs.batch_size = int(configs.batch_size / configs.ngpus_per_node)
             configs.num_workers = int((configs.num_workers + configs.ngpus_per_node - 1) / configs.ngpus_per_node)
-            model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[configs.gpu_idx], find_unused_parameters=True)
+            model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[configs.gpu_idx],
+                                                              find_unused_parameters=True)
         else:
             model.cuda()
             # DistributedDataParallel will divide and allocate batch_size to all
