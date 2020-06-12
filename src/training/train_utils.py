@@ -24,14 +24,7 @@ from models.multi_task_learning_model import Multi_Task_Learning_Model
 
 
 def get_model(configs):
-    """
-    Create model based on backbone name
-    Args:
-        configs:
-
-    Returns:
-
-    """
+    """Create model based on architecture name"""
     if configs.arch == 'ttnet':
         ttnet_model = TTNet(dropout_p=configs.dropout_p, tasks=configs.tasks, input_size=configs.input_size,
                             thresh_ball_pos_mask=configs.thresh_ball_pos_mask)
@@ -53,6 +46,7 @@ def get_model(configs):
 
 
 def get_num_parameters(model):
+    """Count number of trained parameters of the model"""
     if hasattr(model, 'module'):
         num_parameters = sum(p.numel() for p in model.module.parameters() if p.requires_grad)
     else:
@@ -62,6 +56,7 @@ def get_num_parameters(model):
 
 
 def freeze_model(model, freeze_modules_list):
+    """Freeze modules of the model based on the configuration"""
     for layer_name, p in model.named_parameters():
         p.requires_grad = True
         for freeze_module in freeze_modules_list:
@@ -73,6 +68,7 @@ def freeze_model(model, freeze_modules_list):
 
 
 def load_weights_local_stage(pretrained_dict):
+    """Overwrite the weights of the global stage to the local stage"""
     local_weights_dict = {}
     for layer_name, v in pretrained_dict.items():
         if 'ball_global_stage' in layer_name:
@@ -85,6 +81,7 @@ def load_weights_local_stage(pretrained_dict):
 
 
 def load_pretrained_model(model, pretrained_path, gpu_idx, overwrite_global_2_local):
+    """Load weights from the pretrained model"""
     assert os.path.isfile(pretrained_path), "=> no checkpoint found at '{}'".format(pretrained_path)
     if gpu_idx is None:
         checkpoint = torch.load(pretrained_path, map_location='cpu')
@@ -119,6 +116,7 @@ def load_pretrained_model(model, pretrained_path, gpu_idx, overwrite_global_2_lo
 
 
 def resume_model(resume_path, arch, gpu_idx):
+    """Resume training model from the previous trained checkpoint"""
     assert os.path.isfile(resume_path), "=> no checkpoint found at '{}'".format(resume_path)
     if gpu_idx is None:
         checkpoint = torch.load(resume_path, map_location='cpu')
@@ -163,36 +161,17 @@ def make_data_parallel(model, configs):
 
 
 def get_optimizer(configs, model, is_warm_up):
-    """
-    Initialize optimizer for training process
-    Args:
-        configs:
-        model:
-        is_warm_up:
-
-    Returns:
-
-    """
-    # trainable_vars = [param for param in model.module.parameters() if param.requires_grad]
-    if is_warm_up:
-        lr = configs.train_warmup_lr
-        momentum = configs.train_warmup_momentum
-        weight_decay = configs.train_warmup_weight_decay
-        optimizer_type = configs.train_warmup_optimizer_type
-    else:
-        lr = configs.lr
-        momentum = configs.momentum
-        weight_decay = configs.weight_decay
-        optimizer_type = configs.optimizer_type
+    """Create optimizer for training process"""
     if hasattr(model, 'module'):
-        train_params = model.module.parameters()
+        train_params = [param for param in model.module.parameters() if param.requires_grad]
     else:
-        train_params = model.parameters()
+        train_params = [param for param in model.parameters() if param.requires_grad]
 
-    if optimizer_type == 'sgd':
-        optimizer = torch.optim.SGD(train_params, lr=lr, momentum=momentum, weight_decay=weight_decay)
-    elif optimizer_type == 'adam':
-        optimizer = torch.optim.Adam(train_params, lr=lr, weight_decay=weight_decay)
+    if configs.optimizer_type == 'sgd':
+        optimizer = torch.optim.SGD(train_params, lr=configs.lr, momentum=configs.momentum,
+                                    weight_decay=configs.weight_decay)
+    elif configs.optimizer_type == 'adam':
+        optimizer = torch.optim.Adam(train_params, lr=configs.lr, weight_decay=configs.weight_decay)
     else:
         assert False, "Unknown optimizer type"
 
@@ -200,6 +179,7 @@ def get_optimizer(configs, model, is_warm_up):
 
 
 def get_lr_scheduler(optimizer, configs):
+    """Create learning rate scheduler for training process"""
     if configs.lr_type == 'step_lr':
         lr_scheduler = StepLR(optimizer, step_size=configs.lr_step_size, gamma=configs.lr_factor)
     elif configs.lr_type == 'plateau':
@@ -211,17 +191,7 @@ def get_lr_scheduler(optimizer, configs):
 
 
 def get_saved_state(model, optimizer, lr_scheduler, epoch, configs, best_val_loss, earlystop_count):
-    """
-    Get the information to save with checkpoints
-    Args:
-        model:
-        optimizer:
-        epoch:
-        configs:
-
-    Returns:
-
-    """
+    """Get the information to save with checkpoints"""
     if hasattr(model, 'module'):
         model_state_dict = model.module.state_dict()
     else:
@@ -240,8 +210,7 @@ def get_saved_state(model, optimizer, lr_scheduler, epoch, configs, best_val_los
 
 
 def save_checkpoint(checkpoints_dir, saved_fn, saved_state, is_best, epoch):
-    """Save checkpoint every epoch only is best model or after every checkpoint_freq epoch
-    """
+    """Save checkpoint every epoch only is best model or after every checkpoint_freq epoch"""
     if is_best:
         save_path = os.path.join(checkpoints_dir, '{}_best.pth'.format(saved_fn))
     else:

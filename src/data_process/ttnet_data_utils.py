@@ -23,22 +23,28 @@ sys.path.append('../')
 
 
 def load_raw_img(img_path):
-    """
-    Load raw image
-    :param img_path: The path to the image
-    :return:
-    """
+    """Load raw image based on the path to the image"""
     img = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2RGB)  # BGR --> RGB
     return img
 
 
 def gaussian_1d(pos, muy, sigma):
+    """Create 1D Gaussian distribution based on ball position (muy), and std (sigma)"""
     target = torch.exp(- (((pos - muy) / sigma) ** 2) / 2)
-    # target = (torch.exp(- (((pos - muy) / sigma) ** 2) / 2)) / (sigma * np.sqrt(2 * np.pi))
     return target
 
 
 def create_target_ball(ball_position_xy, sigma, w, h, thresh_mask, device):
+    """Create target for the ball detection stages
+
+    :param ball_position_xy: Position of the ball (x,y)
+    :param sigma: standard deviation (a hyperparameter)
+    :param w: width of the resize image
+    :param h: height of the resize image
+    :param thresh_mask: if values of 1D Gaussian < thresh_mask --> set to 0 to reduce computation
+    :param device: cuda() or cpu()
+    :return:
+    """
     w, h = int(w), int(h)
     target_ball_position = torch.zeros((w + h,), device=device)
     # Only do the next step if the ball is existed
@@ -64,9 +70,9 @@ def create_target_events(event_class, device):
 
 
 def get_events_infor(game_list, configs, dataset_type):
-    """
+    """Get information of sequences of images based on events
 
-    :param game_list:
+    :param game_list: List of games (video names)
     :return:
     [
         each event: [[img_path_list], ball_position, event_name, segmentation_path]
@@ -115,6 +121,7 @@ def get_events_infor(game_list, configs, dataset_type):
 
 
 def train_val_data_separation(configs):
+    """Seperate data to training and validation sets"""
     dataset_type = 'training'
     events_infor, events_labels = get_events_infor(configs.train_game_list, configs, dataset_type)
     if configs.no_val:
