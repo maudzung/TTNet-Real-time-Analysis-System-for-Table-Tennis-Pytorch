@@ -29,10 +29,10 @@ def demo(configs):
     video_loader = TTNet_Video_Loader(configs.video_path, configs.input_size, configs.num_frames_sequence)
     result_filename = os.path.join(configs.save_demo_dir, 'results.txt')
     frame_rate = video_loader.video_fps
-
-    configs.frame_dir = None if configs.output_format == 'text' else os.path.join(configs.save_demo_dir, 'frame')
-    if not os.path.isdir(configs.frame_dir):
-        os.makedirs(configs.frame_dir)
+    if configs.save_demo_output:
+        configs.frame_dir = os.path.join(configs.save_demo_dir, 'frame')
+        if not os.path.isdir(configs.frame_dir):
+            os.makedirs(configs.frame_dir)
 
     configs.device = torch.device('cuda:{}'.format(configs.gpu_idx))
 
@@ -47,8 +47,10 @@ def demo(configs):
     middle_idx = int(configs.num_frames_sequence / 2)
     queue_frames = deque(maxlen=middle_idx + 1)
     frame_idx = 0
-    w_ratio = 1920. / 320.
-    h_ratio = 1080. / 128.
+    w_original, h_original = 1920, 1080
+    w_resize, h_resize = 320, 128
+    w_ratio = w_original / w_resize
+    h_ratio = h_original / h_resize
     with torch.no_grad():
         for count, origin_imgs, resized_imgs in video_loader:
             # take the middle one
@@ -61,8 +63,8 @@ def demo(configs):
                 pred_ball_global, pred_ball_local, pred_events, pred_seg, configs.input_size[0],
                 configs.thresh_ball_pos_mask, configs.seg_thresh, configs.event_thresh)
             prediction_ball_final = [
-                int(prediction_global[0] * w_ratio + prediction_local[0] - 320 / 2),
-                int(prediction_global[1] * h_ratio + prediction_local[1] - 128 / 2)
+                int(prediction_global[0] * w_ratio + prediction_local[0] - w_resize / 2),
+                int(prediction_global[1] * h_ratio + prediction_local[1] - h_resize / 2)
             ]
 
             # Get infor of the (middle_idx + 1)th frame
@@ -70,7 +72,7 @@ def demo(configs):
                 frame_pred_infor = queue_frames.popleft()
                 seg_img = frame_pred_infor['seg'].astype(np.uint8)
                 ball_pos = frame_pred_infor['ball']
-                seg_img = cv2.resize(seg_img, (1920, 1080))
+                seg_img = cv2.resize(seg_img, (w_original, h_original))
                 ploted_img = plot_detection(img, ball_pos, seg_img, prediction_events)
 
                 ploted_img = cv2.cvtColor(ploted_img, cv2.COLOR_RGB2BGR)
