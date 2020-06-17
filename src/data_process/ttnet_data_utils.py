@@ -75,7 +75,7 @@ def get_events_infor(game_list, configs, dataset_type):
     :param game_list: List of games (video names)
     :return:
     [
-        each event: [[img_path_list], ball_position, event_name, segmentation_path]
+        each event: [[img_path_list], ball_position, event_class, segmentation_path]
     ]
     """
     # the paper mentioned 25, but used 9 frames only
@@ -112,11 +112,10 @@ def get_events_infor(game_list, configs, dataset_type):
             # Get segmentation path for the last frame in the sequence
             seg_path = os.path.join(annos_dir, game_name, 'segmentation_masks', '{}.png'.format(last_f_idx))
             assert os.path.isfile(seg_path) == True, "event_frameidx: {} The segmentation path {} is invalid".format(
-                event_frameidx,
-                seg_path)
-
-            events_infor.append([img_path_list, ball_position_xy, event_name, seg_path])
-            events_labels.append(configs.events_dict[event_name])
+                event_frameidx, seg_path)
+            event_class = configs.events_dict[event_name]
+            events_infor.append([img_path_list, ball_position_xy, event_class, seg_path])
+            events_labels.append(event_class)
     return events_infor, events_labels
 
 

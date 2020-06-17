@@ -21,9 +21,8 @@ from data_process.ttnet_data_utils import load_raw_img
 
 
 class TTNet_Dataset(Dataset):
-    def __init__(self, events_infor, events_dict, input_size, transform=None, resize=None, num_samples=None):
+    def __init__(self, events_infor, input_size, transform=None, resize=None, num_samples=None):
         self.events_infor = events_infor
-        self.events_dict = events_dict
         self.w = input_size[0]
         self.h = input_size[1]
         self.transform = transform
@@ -36,8 +35,7 @@ class TTNet_Dataset(Dataset):
         return len(self.events_infor)
 
     def __getitem__(self, index):
-        img_path_list, org_ball_pos_xy, event_name, seg_path = self.events_infor[index]
-        event_class = self.events_dict[event_name]
+        img_path_list, org_ball_pos_xy, event_class, seg_path = self.events_infor[index]
         # Load segmentation
         seg_img = load_raw_img(seg_path)
 
@@ -91,7 +89,7 @@ if __name__ == '__main__':
     ], p=1.)
     resize_transform = Resize(new_size=tuple(configs.input_size), p=1.0)
 
-    ttnet_dataset = TTNet_Dataset(train_events_infor, configs.events_dict, configs.input_size, transform=transform,
+    ttnet_dataset = TTNet_Dataset(train_events_infor, configs.input_size, transform=transform,
                                   resize=resize_transform)
 
     print('len(ttnet_dataset): {}'.format(len(ttnet_dataset)))
