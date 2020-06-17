@@ -222,9 +222,7 @@ def parse_configs():
         'event': configs.event_weight,
         'seg': configs.seg_weight
     }
-    configs.tasks_loss_weight = []
-    for task in configs.tasks:
-        configs.tasks_loss_weight.append(loss_weight_dict[task])
+    configs.tasks_loss_weight = [loss_weight_dict[task] for task in configs.tasks]
 
     configs.freeze_modules_list = []
     if configs.freeze_global:
