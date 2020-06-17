@@ -14,9 +14,10 @@ from tqdm import tqdm
 
 sys.path.append('../')
 
-from data_process.ttnet_dataloader import create_train_val_dataloader, create_test_dataloader
-from training.train_utils import get_model, get_optimizer, get_lr_scheduler, get_saved_state, load_pretrained_model
-from training.train_utils import make_data_parallel, resume_model, save_checkpoint, get_num_parameters, freeze_model
+from data_process.ttnet_dataloader import create_train_val_dataloader
+from models.model_utils import get_model, load_pretrained_model, make_data_parallel, resume_model, get_num_parameters
+from models.model_utils import freeze_model
+from training.train_utils import get_optimizer, get_lr_scheduler, get_saved_state, save_checkpoint
 from utils.misc import AverageMeter, ProgressMeter
 from utils.logger import Logger
 from config.config import parse_configs
@@ -97,7 +98,7 @@ def main_worker(gpu_idx, configs):
         num_parameters = get_num_parameters(model)
         logger.info('number of trained parameters of the model: {}'.format(num_parameters))
 
-    optimizer = get_optimizer(configs, model, is_warm_up=False)
+    optimizer = get_optimizer(configs, model)
     lr_scheduler = get_lr_scheduler(optimizer, configs)
     best_val_loss = np.inf
     earlystop_count = 0

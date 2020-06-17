@@ -14,8 +14,8 @@ from tqdm import tqdm
 sys.path.append('../')
 
 from data_process.ttnet_dataloader import create_test_dataloader
-from training.train_utils import get_model, load_pretrained_model
-from training.train_utils import make_data_parallel, get_num_parameters
+from models.model_utils import get_model, load_pretrained_model
+from models.model_utils import make_data_parallel, get_num_parameters
 from utils.misc import AverageMeter
 from config.config import parse_configs
 from inference.post_processing import get_prediction_ball_pos, get_prediction_seg, prediction_get_events

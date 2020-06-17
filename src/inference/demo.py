@@ -20,7 +20,7 @@ import numpy as np
 sys.path.append('../')
 
 from data_process.ttnet_video_loader import TTNet_Video_Loader
-from training.train_utils import get_model, load_pretrained_model
+from models.model_utils import get_model, load_pretrained_model
 from config.config import parse_configs
 from inference.post_processing import post_processing
 
