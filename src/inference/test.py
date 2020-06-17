@@ -14,7 +14,7 @@ from tqdm import tqdm
 sys.path.append('../')
 
 from data_process.ttnet_dataloader import create_test_dataloader
-from models.model_utils import get_model, load_pretrained_model
+from models.model_utils import create_model, load_pretrained_model
 from models.model_utils import make_data_parallel, get_num_parameters
 from utils.misc import AverageMeter
 from config.config import parse_configs
@@ -60,7 +60,7 @@ def main_worker(gpu_idx, configs):
             configs.distributed and (configs.rank % configs.ngpus_per_node == 0))
 
     # model
-    model = get_model(configs)
+    model = create_model(configs)
     model = make_data_parallel(model, configs)
 
     if configs.is_master_node:

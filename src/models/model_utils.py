@@ -21,7 +21,7 @@ from models.unbalanced_loss_model import Unbalance_Loss_Model
 from models.multi_task_learning_model import Multi_Task_Learning_Model
 
 
-def get_model(configs):
+def create_model(configs):
     """Create model based on architecture name"""
     if configs.arch == 'ttnet':
         ttnet_model = TTNet(dropout_p=configs.dropout_p, tasks=configs.tasks, input_size=configs.input_size,
@@ -162,4 +162,4 @@ if __name__ == '__main__':
     from config.config import get_default_configs
 
     configs = get_default_configs()
-    model = get_model(configs)
+    model = create_model(configs)

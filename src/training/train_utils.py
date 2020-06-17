@@ -16,7 +16,7 @@ import torch
 from torch.optim.lr_scheduler import StepLR, ReduceLROnPlateau
 
 
-def get_optimizer(configs, model):
+def create_optimizer(configs, model):
     """Create optimizer for training process"""
     if hasattr(model, 'module'):
         train_params = [param for param in model.module.parameters() if param.requires_grad]
@@ -34,7 +34,7 @@ def get_optimizer(configs, model):
     return optimizer
 
 
-def get_lr_scheduler(optimizer, configs):
+def create_lr_scheduler(optimizer, configs):
     """Create learning rate scheduler for training process"""
     if configs.lr_type == 'step_lr':
         lr_scheduler = StepLR(optimizer, step_size=configs.lr_step_size, gamma=configs.lr_factor)
