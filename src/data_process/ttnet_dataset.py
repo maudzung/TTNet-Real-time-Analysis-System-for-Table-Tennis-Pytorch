@@ -35,7 +35,7 @@ class TTNet_Dataset(Dataset):
         return len(self.events_infor)
 
     def __getitem__(self, index):
-        img_path_list, org_ball_pos_xy, event_class, seg_path = self.events_infor[index]
+        img_path_list, org_ball_pos_xy, target_events, seg_path = self.events_infor[index]
         # Load segmentation
         seg_img = load_raw_img(seg_path)
 
@@ -65,8 +65,8 @@ class TTNet_Dataset(Dataset):
         target_seg[target_seg < 75] = 0.
         target_seg[target_seg >= 75] = 1.
 
-        return origin_imgs, resized_imgs, np.array(org_ball_pos_xy), np.array(global_ball_pos_xy), np.array(
-            event_class), target_seg
+        return origin_imgs, resized_imgs, np.array(org_ball_pos_xy), np.array(
+            global_ball_pos_xy), target_events, target_seg
 
 
 if __name__ == '__main__':
@@ -94,7 +94,7 @@ if __name__ == '__main__':
 
     print('len(ttnet_dataset): {}'.format(len(ttnet_dataset)))
     example_index = 100
-    origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg = ttnet_dataset.__getitem__(
+    origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, target_event, target_seg = ttnet_dataset.__getitem__(
         example_index)
 
     print('target_seg shape: {}'.format(target_seg.shape))
@@ -114,7 +114,9 @@ if __name__ == '__main__':
         axes[i].imshow(img)
         axes[i].set_title('image {}'.format(i))
     fig.suptitle(
-        'Event: {}, ball_position_xy: (x= {}, y= {})'.format(event_class, org_ball_pos_xy[0], org_ball_pos_xy[1]),
+        'Event: is bounce {}, is net: {}, ball_position_xy: (x= {}, y= {})'.format(target_event[0], target_event[1],
+                                                                                   org_ball_pos_xy[0],
+                                                                                   org_ball_pos_xy[1]),
         fontsize=16)
     plt.savefig(os.path.join(out_images_dir, 'org_all_imgs_{}.jpg'.format(example_index)))
     target_seg = target_seg.transpose(1, 2, 0)
@@ -136,6 +138,8 @@ if __name__ == '__main__':
         axes[i].imshow(img)
         axes[i].set_title('image {}'.format(i))
     fig.suptitle(
-        'Event: {}, ball_position_xy: (x= {}, y= {})'.format(event_class, global_ball_pos_xy[0], global_ball_pos_xy[1]),
+        'Event: is bounce {}, is net: {}, ball_position_xy: (x= {}, y= {})'.format(target_event[0], target_event[1],
+                                                                                   global_ball_pos_xy[0],
+                                                                                   global_ball_pos_xy[1]),
         fontsize=16)
     plt.savefig(os.path.join(out_images_dir, 'augment_all_imgs_{}.jpg'.format(example_index)))

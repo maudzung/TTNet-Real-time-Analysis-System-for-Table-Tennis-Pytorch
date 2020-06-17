@@ -219,7 +219,7 @@ def train_one_epoch(train_loader, model, optimizer, epoch, configs, logger):
     model.train()
     start_time = time.time()
     for batch_idx, (
-            origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg) in enumerate(
+            origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, target_events, target_seg) in enumerate(
         tqdm(train_loader)):
         data_time.update(time.time() - start_time)
         batch_size = resized_imgs.size(0)
@@ -230,10 +230,10 @@ def train_one_epoch(train_loader, model, optimizer, epoch, configs, logger):
             origin_imgs = origin_imgs.to(configs.device, non_blocking=True).float()
             # compute output
             pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy, total_loss, _ = model(
-                origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg)
+                origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, target_events, target_seg)
         else:
             pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy, total_loss, _ = model(
-                None, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg)
+                None, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, target_events, target_seg)
         # For torch.nn.DataParallel case
         if (not configs.distributed) and (configs.gpu_idx is None):
             total_loss = torch.mean(total_loss)
@@ -272,7 +272,7 @@ def validate_one_epoch(val_loader, model, epoch, configs, logger):
     with torch.no_grad():
         start_time = time.time()
         for batch_idx, (
-                origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg) in enumerate(
+                origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, target_events, target_seg) in enumerate(
             tqdm(val_loader)):
             data_time.update(time.time() - start_time)
             batch_size = resized_imgs.size(0)
@@ -283,10 +283,10 @@ def validate_one_epoch(val_loader, model, epoch, configs, logger):
                 origin_imgs = origin_imgs.to(configs.device, non_blocking=True).float()
                 # compute output
                 pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy, total_loss, _ = model(
-                    origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg)
+                    origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, target_events, target_seg)
             else:
                 pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy, total_loss, _ = model(
-                    None, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg)
+                    None, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, target_events, target_seg)
             # For torch.nn.DataParallel case
             if (not configs.distributed) and (configs.gpu_idx is None):
                 total_loss = torch.mean(total_loss)

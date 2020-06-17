@@ -55,6 +55,8 @@ def parse_configs():
                         help='If true, use all data for training, no validation set')
     parser.add_argument('--val-size', type=float, default=0.2,
                         help='The size of validation set')
+    parser.add_argument('--smooth-labelling', action='store_true',
+                        help='If true, smoothly make the labels of event spotting')
     parser.add_argument('--num_samples', type=int, default=None,
                         help='Take a subset of the dataset to run and debug')
     parser.add_argument('--num_workers', type=int, default=8,

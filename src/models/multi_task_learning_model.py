@@ -17,7 +17,7 @@ import torch.nn as nn
 sys.path.append('../')
 
 from losses.losses import Ball_Detection_Loss, Events_Spotting_Loss, Segmentation_Loss
-from data_process.ttnet_data_utils import create_target_ball, create_target_events
+from data_process.ttnet_data_utils import create_target_ball
 
 
 class Multi_Task_Learning_Model(nn.Module):
@@ -42,7 +42,7 @@ class Multi_Task_Learning_Model(nn.Module):
         self.event_loss_criterion = Events_Spotting_Loss(weights=weights_events, num_events=num_events)
         self.seg_loss_criterion = Segmentation_Loss()
 
-    def forward(self, original_batch_input, resize_batch_input, org_ball_pos_xy, global_ball_pos_xy, event_class,
+    def forward(self, original_batch_input, resize_batch_input, org_ball_pos_xy, global_ball_pos_xy, target_events,
                 target_seg):
         log_vars_idx = 0
         pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy = self.model(original_batch_input,
@@ -72,9 +72,7 @@ class Multi_Task_Learning_Model(nn.Module):
 
         if pred_events is not None:
             log_vars_idx += 1
-            target_events = torch.zeros((batch_size, 2), device=self.device)
-            for sample_idx in range(batch_size):
-                target_events[sample_idx] = create_target_events(event_class[sample_idx], device=self.device)
+            target_events = target_events.to(device=self.device)
             event_loss = self.event_loss_criterion(pred_events, target_events)
             total_loss += event_loss / (2 * torch.exp(self.log_vars[log_vars_idx])) + self.log_vars[log_vars_idx]
 

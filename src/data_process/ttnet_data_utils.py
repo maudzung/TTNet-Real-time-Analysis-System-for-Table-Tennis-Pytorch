@@ -61,12 +61,12 @@ def create_target_ball(ball_position_xy, sigma, w, h, thresh_mask, device):
     return target_ball_position
 
 
-def create_target_events(event_class, device):
-    target_event = torch.zeros((2,), device=device)
+def smooth_event_labelling(event_class, smooth_idx, event_frameidx):
+    target_events = np.zeros((2,))
     if event_class < 2:
-        target_event[event_class] = 1.
-
-    return target_event
+        n = smooth_idx - event_frameidx
+        target_events[event_class] = np.cos(n * np.pi / 8)
+    return target_events
 
 
 def get_events_infor(game_list, configs, dataset_type):
@@ -75,7 +75,7 @@ def get_events_infor(game_list, configs, dataset_type):
     :param game_list: List of games (video names)
     :return:
     [
-        each event: [[img_path_list], ball_position, event_class, segmentation_path]
+        each event: [[img_path_list], ball_position, target_events, segmentation_path]
     ]
     """
     # the paper mentioned 25, but used 9 frames only
@@ -97,25 +97,36 @@ def get_events_infor(game_list, configs, dataset_type):
         events_annos = json.load(json_events)
         for event_frameidx, event_name in events_annos.items():
             img_path_list = []
-            for f_idx in range(int(event_frameidx) - num_frames_from_event,
-                               int(event_frameidx) + num_frames_from_event + 1):
-                img_path = os.path.join(images_dir, game_name, 'img_{:06d}.jpg'.format(f_idx))
-                img_path_list.append(img_path)
-            last_f_idx = int(event_frameidx) + num_frames_from_event
-            # Get ball position for the last frame in the sequence
-            ball_position_xy = ball_annos['{}'.format(last_f_idx)]
-            ball_position_xy = [int(ball_position_xy['x']), int(ball_position_xy['y'])]
-            # Ignore the event without ball information
-            if (ball_position_xy[0] < 0) or (ball_position_xy[1] < 0):
-                continue
+            if configs.smooth_labelling:
+                smooth_frame_indices = [idx for idx in range(int(event_frameidx) - num_frames_from_event,
+                                                             int(event_frameidx) + num_frames_from_event + 1)]
+            else:
+                smooth_frame_indices = [event_frameidx]
+            for smooth_idx in smooth_frame_indices:
+                sub_smooth_frame_indices = [idx for idx in range(smooth_idx - num_frames_from_event,
+                                                                 smooth_idx + num_frames_from_event + 1)]
 
-            # Get segmentation path for the last frame in the sequence
-            seg_path = os.path.join(annos_dir, game_name, 'segmentation_masks', '{}.png'.format(last_f_idx))
-            assert os.path.isfile(seg_path) == True, "event_frameidx: {} The segmentation path {} is invalid".format(
-                event_frameidx, seg_path)
-            event_class = configs.events_dict[event_name]
-            events_infor.append([img_path_list, ball_position_xy, event_class, seg_path])
-            events_labels.append(event_class)
+                for sub_smooth_idx in sub_smooth_frame_indices:
+                    img_path = os.path.join(images_dir, game_name, 'img_{:06d}.jpg'.format(sub_smooth_idx))
+                    img_path_list.append(img_path)
+                last_f_idx = smooth_idx + num_frames_from_event
+                # Get ball position for the last frame in the sequence
+                ball_position_xy = ball_annos['{}'.format(last_f_idx)]
+                ball_position_xy = [int(ball_position_xy['x']), int(ball_position_xy['y'])]
+                # Ignore the event without ball information
+                if (ball_position_xy[0] < 0) or (ball_position_xy[1] < 0):
+                    continue
+
+                # Get segmentation path for the last frame in the sequence
+                seg_path = os.path.join(annos_dir, game_name, 'segmentation_masks', '{}.png'.format(last_f_idx))
+                assert os.path.isfile(seg_path) == True, "smooth_idx: {} The segmentation path {} is invalid".format(
+                    smooth_idx, seg_path)
+                event_class = configs.events_dict[event_name]
+
+                target_events = smooth_event_labelling(event_class, smooth_idx, event_frameidx)
+
+                events_infor.append([img_path_list, ball_position_xy, target_events, seg_path])
+                events_labels.append(event_class)
     return events_infor, events_labels
 
 
@@ -144,8 +155,6 @@ if __name__ == '__main__':
     event_name = 'net'
     event_class = configs.events_dict[event_name]
     configs.device = torch.device('cpu')
-    target_event = create_target_events(event_class, device=configs.device)
-    print(target_event)
     ball_position_xy = np.array([100, 50])
     target_ball_position = create_target_ball(ball_position_xy, sigma=0.5, w=320, h=128, thresh_mask=0.01,
                                               device=configs.device)
