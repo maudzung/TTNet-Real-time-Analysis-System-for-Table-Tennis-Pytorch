@@ -32,7 +32,7 @@ def create_train_val_dataloader(configs):
     val_transform = None
     resize_transform = Resize(new_size=tuple(configs.input_size), p=1.0)
 
-    train_events_infor, val_events_infor = train_val_data_separation(configs)
+    train_events_infor, val_events_infor, *_ = train_val_data_separation(configs)
 
     train_dataset = TTNet_Dataset(train_events_infor, configs.input_size,
                                   transform=train_transform, resize=resize_transform, num_samples=configs.num_samples)
