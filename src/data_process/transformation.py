@@ -68,7 +68,7 @@ class Resize(object):
             # Adjust ball position
             w_ratio = w / self.new_size[0]
             h_ratio = h / self.new_size[1]
-            ball_position_xy = [int(ball_position_xy[0] / w_ratio), int(ball_position_xy[1] / h_ratio)]
+            ball_position_xy = np.array([ball_position_xy[0] / w_ratio, ball_position_xy[1] / h_ratio], dtype=np.int)
 
         return imgs, ball_position_xy, seg_img
 
@@ -107,8 +107,8 @@ class Random_Crop(object):
             seg_img = cv2.resize(seg_img, (seg_img_w, seg_img_h), interpolation=self.interpolation)
 
             # Adjust ball position
-            ball_position_xy = [int((ball_position_xy[0] - min_x) * w_ratio),
-                                int((ball_position_xy[1] - min_y) * h_ratio)]
+            ball_position_xy = np.array([(ball_position_xy[0] - min_x) * w_ratio,
+                                         (ball_position_xy[1] - min_y) * h_ratio], dtype=np.int)
 
         return imgs, ball_position_xy, seg_img
 
@@ -129,7 +129,6 @@ class Random_Rotate(object):
 
             # Adjust ball position, apply the same rotate_matrix for the sequential images
             ball_position_xy = rotate_matrix.dot(np.array([ball_position_xy[0], ball_position_xy[1], 1.]).T)
-            ball_position_xy = ball_position_xy.astype(np.int)
 
             # Rotate seg_img
             seg_h, seg_w, seg_c = seg_img.shape
@@ -137,7 +136,7 @@ class Random_Rotate(object):
             seg_rotate_matrix = cv2.getRotationMatrix2D(seg_center, random_angle, 1.)
             seg_img = cv2.warpAffine(seg_img, seg_rotate_matrix, (seg_w, seg_h), flags=cv2.INTER_LINEAR)
 
-        return imgs, ball_position_xy, seg_img
+        return imgs, ball_position_xy.astype(np.int), seg_img
 
 
 class Random_HFlip(object):
@@ -153,6 +152,6 @@ class Random_HFlip(object):
             seg_img = cv2.flip(seg_img, 1)
 
             # Adjust ball position: Same y, new x = w - x
-            ball_position_xy = [w - ball_position_xy[0], ball_position_xy[1]]
+            ball_position_xy[0] = w - ball_position_xy[0]
 
         return imgs, ball_position_xy, seg_img

@@ -116,7 +116,7 @@ def get_events_infor(game_list, configs, dataset_type):
                     print('smooth_idx: {} - no ball position for the frame idx {}'.format(smooth_idx, last_f_idx))
                     continue
                 ball_position_xy = ball_annos['{}'.format(last_f_idx)]
-                ball_position_xy = [int(ball_position_xy['x']), int(ball_position_xy['y'])]
+                ball_position_xy = np.array([ball_position_xy['x'], ball_position_xy['y']], dtype=np.int)
                 # Ignore the event without ball information
                 if (ball_position_xy[0] < 0) or (ball_position_xy[1] < 0):
                     continue

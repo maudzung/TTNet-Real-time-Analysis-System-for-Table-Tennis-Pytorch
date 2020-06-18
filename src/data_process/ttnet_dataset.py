@@ -65,8 +65,7 @@ class TTNet_Dataset(Dataset):
         target_seg[target_seg < 75] = 0.
         target_seg[target_seg >= 75] = 1.
 
-        return origin_imgs, resized_imgs, np.array(org_ball_pos_xy), np.array(
-            global_ball_pos_xy), target_events, target_seg
+        return origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, target_events, target_seg
 
 
 if __name__ == '__main__':
