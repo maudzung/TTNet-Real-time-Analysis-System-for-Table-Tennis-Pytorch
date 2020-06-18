@@ -19,7 +19,7 @@ def get_frame_indexes(events_annos_path):
         event = events_annos[main_f_idx]
         main_f_idx = int(main_f_idx)
         # take 9 or 25 videos frames with the event right in the middle frame
-        if event == 'empty':  # extract only (-4,4) images
+        if event == 'empty_event':  # extract only (-4,4) images
             for idx in range(main_f_idx - num_frames_from_event, main_f_idx + num_frames_from_event + 1):
                 selected_indexes.append(idx)
         else:  # extract (-8,8) images
@@ -42,7 +42,10 @@ def extract_images_from_videos(video_path, events_annos_path, out_images_dir):
     n_frames = video_cap.get(cv2.CAP_PROP_FRAME_COUNT)
     f_width = video_cap.get(cv2.CAP_PROP_FRAME_WIDTH)
     f_height = video_cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-    print('video_fn: {}.mp4, f_width: {}, f_height: {}'.format(video_fn, f_width, f_height))
+    fps = video_cap.get(cv2.CAP_PROP_FPS)
+    print('*-' * 20)
+    print('Processing video {}.mp4'.format(video_fn))
+    print('rame rate: {}, f_width: {}, f_height: {}'.format(fps, f_width, f_height))
     print('number of frames in the video: {}, number of selected frames: {}'.format(n_frames, len(selected_indexes)))
     frame_cnt = -1
     while True:
@@ -52,8 +55,7 @@ def extract_images_from_videos(video_path, events_annos_path, out_images_dir):
             if frame_cnt in selected_indexes:
                 image_path = os.path.join(sub_images_dir, 'img_{:06d}.jpg'.format(frame_cnt))
                 if os.path.isfile(image_path):
-                    print('video {} had been already extracted'.format(video_path))
-                    break
+                    continue
                 cv2.imwrite(image_path, img)
         else:
             break
