@@ -14,6 +14,7 @@ import os
 
 import torch
 from torch.optim.lr_scheduler import StepLR, ReduceLROnPlateau
+import torch.distributed as dist
 
 
 def create_optimizer(configs, model):
@@ -74,3 +75,10 @@ def save_checkpoint(checkpoints_dir, saved_fn, saved_state, is_best, epoch):
 
     torch.save(saved_state, save_path)
     print('save a checkpoint at {}'.format(save_path))
+
+
+def reduce_tensor(tensor, world_size):
+    rt = tensor.clone()
+    dist.all_reduce(rt, op=dist.reduce_op.SUM)
+    rt /= world_size
+    return rt
