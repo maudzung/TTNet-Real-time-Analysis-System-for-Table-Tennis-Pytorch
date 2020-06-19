@@ -40,10 +40,7 @@ class TTNet_Dataset(Dataset):
         seg_img = load_raw_img(seg_path)
 
         # Load list of images (-4, 4)
-        origin_imgs = []
-        for img_path_idx, img_path in enumerate(img_path_list):
-            origin_imgs.append(load_raw_img(img_path))
-        # loading process faster 3 times with np.dstack() function
+        origin_imgs = [load_raw_img(img_path) for img_path in img_path_list]
         origin_imgs = np.dstack(origin_imgs)  # (1080, 1920, 27)
 
         # Apply augmentation
