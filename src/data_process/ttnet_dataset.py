@@ -16,6 +16,7 @@ import time
 
 from torch.utils.data import Dataset
 from turbojpeg import TurboJPEG
+import cv2
 
 sys.path.append('../')
 
