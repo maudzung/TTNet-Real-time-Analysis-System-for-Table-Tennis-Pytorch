@@ -12,8 +12,10 @@
 import sys
 import os
 import numpy as np
+import time
 
 from torch.utils.data import Dataset
+from turbojpeg import TurboJPEG
 
 sys.path.append('../')
 
@@ -38,9 +40,13 @@ class TTNet_Dataset(Dataset):
         img_path_list, org_ball_pos_xy, target_events, seg_path = self.events_infor[index]
         # Load segmentation
         seg_img = load_raw_img(seg_path)
-
+        self.jpeg_reader = TurboJPEG()
         # Load list of images (-4, 4)
-        origin_imgs = [load_raw_img(img_path) for img_path in img_path_list]
+        origin_imgs = []
+        for img_path in img_path_list:
+            in_file = open(img_path, 'rb')
+            origin_imgs.append(self.jpeg_reader.decode(in_file.read(), 0))
+            in_file.close()
         origin_imgs = np.dstack(origin_imgs)  # (1080, 1920, 27)
 
         # Apply augmentation
