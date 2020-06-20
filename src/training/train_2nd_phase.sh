@@ -1,13 +1,13 @@
 #!/bin/bash
 
 python main.py \
-  --saved_fn 'ttnet_full_freeze_global_freeze_seg' \
+  --saved_fn 'ttnet_2nd_phase' \
   --arch 'ttnet' \
   --no-val \
   --batch_size 32 \
-  --num_workers 8 \
+  --num_workers 4 \
   --sigma 1. \
-  --thresh_ball_pos_mask 0.01 \
+  --thresh_ball_pos_mask 0.05 \
   --start_epoch 1 \
   --num_epochs 21 \
   --lr 0.001 \
@@ -23,7 +23,9 @@ python main.py \
   --seg_weight 0. \
   --event_weight 2. \
   --local_weight 1. \
-  --pretrained_path ../../checkpoints/ttnet_no_local_no_event/ttnet_no_local_no_event_epoch_21.pth \
+  --pretrained_path ../../checkpoints/ttnet_1st_phase/ttnet_1st_phase_epoch_21.pth \
   --overwrite_global_2_local \
   --freeze_seg \
-  --freeze_global
+  --freeze_global \
+  --smooth-labelling \
+  --print_freq 50
