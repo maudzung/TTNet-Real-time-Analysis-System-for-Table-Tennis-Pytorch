@@ -202,6 +202,7 @@ def parse_configs():
     configs.num_events = len(configs.events_weights_loss_dict)  # Just "bounce" and "net hits"
     configs.num_frames_sequence = 9
 
+    configs.org_size = (1920, 1080)
     configs.input_size = (320, 128)
 
     configs.tasks = ['global', 'local', 'event', 'seg']
