@@ -61,12 +61,13 @@ def create_target_ball(ball_position_xy, sigma, w, h, thresh_mask, device):
     return target_ball_position
 
 
-def create_target_events(event_class, device):
-    target_event = torch.zeros((2,), device=device)
+def smooth_event_labelling(event_class, smooth_idx, event_frameidx):
+    target_events = np.zeros((2,))
     if event_class < 2:
-        target_event[event_class] = 1.
-
-    return target_event
+        n = smooth_idx - event_frameidx
+        target_events[event_class] = np.cos(n * np.pi / 8)
+        target_events[target_events < 0.01] = 0.
+    return target_events
 
 
 def get_events_infor(game_list, configs, dataset_type):
@@ -75,7 +76,7 @@ def get_events_infor(game_list, configs, dataset_type):
     :param game_list: List of games (video names)
     :return:
     [
-        each event: [[img_path_list], ball_position, event_name, segmentation_path]
+        each event: [[img_path_list], ball_position, target_events, segmentation_path]
     ]
     """
     # the paper mentioned 25, but used 9 frames only
@@ -96,27 +97,43 @@ def get_events_infor(game_list, configs, dataset_type):
         json_events = open(events_annos_path)
         events_annos = json.load(json_events)
         for event_frameidx, event_name in events_annos.items():
-            img_path_list = []
-            for f_idx in range(int(event_frameidx) - num_frames_from_event,
-                               int(event_frameidx) + num_frames_from_event + 1):
-                img_path = os.path.join(images_dir, game_name, 'img_{:06d}.jpg'.format(f_idx))
-                img_path_list.append(img_path)
-            last_f_idx = int(event_frameidx) + num_frames_from_event
-            # Get ball position for the last frame in the sequence
-            ball_position_xy = ball_annos['{}'.format(last_f_idx)]
-            ball_position_xy = [int(ball_position_xy['x']), int(ball_position_xy['y'])]
-            # Ignore the event without ball information
-            if (ball_position_xy[0] < 0) or (ball_position_xy[1] < 0):
-                continue
+            event_frameidx = int(event_frameidx)
+            smooth_frame_indices = [event_frameidx]  # By default
+            if (event_name != 'empty_event') and (configs.smooth_labelling):
+                smooth_frame_indices = [idx for idx in range(event_frameidx - num_frames_from_event,
+                                                             event_frameidx + num_frames_from_event + 1)]
 
-            # Get segmentation path for the last frame in the sequence
-            seg_path = os.path.join(annos_dir, game_name, 'segmentation_masks', '{}.png'.format(last_f_idx))
-            assert os.path.isfile(seg_path) == True, "event_frameidx: {} The segmentation path {} is invalid".format(
-                event_frameidx,
-                seg_path)
+            for smooth_idx in smooth_frame_indices:
+                sub_smooth_frame_indices = [idx for idx in range(smooth_idx - num_frames_from_event,
+                                                                 smooth_idx + num_frames_from_event + 1)]
+                img_path_list = []
+                for sub_smooth_idx in sub_smooth_frame_indices:
+                    img_path = os.path.join(images_dir, game_name, 'img_{:06d}.jpg'.format(sub_smooth_idx))
+                    img_path_list.append(img_path)
+                last_f_idx = smooth_idx + num_frames_from_event
+                # Get ball position for the last frame in the sequence
+                if '{}'.format(last_f_idx) not in ball_annos.keys():
+                    print('smooth_idx: {} - no ball position for the frame idx {}'.format(smooth_idx, last_f_idx))
+                    continue
+                ball_position_xy = ball_annos['{}'.format(last_f_idx)]
+                ball_position_xy = np.array([ball_position_xy['x'], ball_position_xy['y']], dtype=np.int)
+                # Ignore the event without ball information
+                if (ball_position_xy[0] < 0) or (ball_position_xy[1] < 0):
+                    continue
 
-            events_infor.append([img_path_list, ball_position_xy, event_name, seg_path])
-            events_labels.append(configs.events_dict[event_name])
+                # Get segmentation path for the last frame in the sequence
+                seg_path = os.path.join(annos_dir, game_name, 'segmentation_masks', '{}.png'.format(last_f_idx))
+                if not os.path.isfile(seg_path):
+                    print("smooth_idx: {} - The segmentation path {} is invalid".format(smooth_idx, seg_path))
+                    continue
+                event_class = configs.events_dict[event_name]
+
+                target_events = smooth_event_labelling(event_class, smooth_idx, event_frameidx)
+                events_infor.append([img_path_list, ball_position_xy, target_events, seg_path])
+                # Re-label if the event is neither bounce nor net hit
+                if (target_events[0] == 0) and (target_events[1] == 0):
+                    event_class = 2
+                events_labels.append(event_class)
     return events_infor, events_labels
 
 
@@ -126,7 +143,9 @@ def train_val_data_separation(configs):
     events_infor, events_labels = get_events_infor(configs.train_game_list, configs, dataset_type)
     if configs.no_val:
         train_events_infor = events_infor
+        train_events_labels = events_labels
         val_events_infor = None
+        val_events_labels = None
     else:
         train_events_infor, val_events_infor, train_events_labels, val_events_labels = train_test_split(events_infor,
                                                                                                         events_labels,
@@ -134,19 +153,20 @@ def train_val_data_separation(configs):
                                                                                                         test_size=configs.val_size,
                                                                                                         random_state=configs.seed,
                                                                                                         stratify=events_labels)
-    return train_events_infor, val_events_infor
+    return train_events_infor, val_events_infor, train_events_labels, val_events_labels
 
 
 if __name__ == '__main__':
     from config.config import parse_configs
 
     configs = parse_configs()
-    train_events_infor, val_events_infor = train_val_data_separation(configs)
+    train_events_infor, val_events_infor, train_events_labels, val_events_labels = train_val_data_separation(configs)
+    print('Counter train_events_labels: {}'.format(Counter(train_events_labels)))
+    if val_events_labels is not None:
+        print('Counter val_events_labels: {}'.format(Counter(val_events_labels)))
     event_name = 'net'
     event_class = configs.events_dict[event_name]
     configs.device = torch.device('cpu')
-    target_event = create_target_events(event_class, device=configs.device)
-    print(target_event)
     ball_position_xy = np.array([100, 50])
     target_ball_position = create_target_ball(ball_position_xy, sigma=0.5, w=320, h=128, thresh_mask=0.01,
                                               device=configs.device)
@@ -157,11 +177,3 @@ if __name__ == '__main__':
     target_ball_g_y = np.argmax(target_ball_position[320:])
     print('max_val_x: {}, max_val_y: {}'.format(max_val_x, max_val_y))
     print('target_ball_g_x: {}, target_ball_g_x: {}'.format(target_ball_g_x, target_ball_g_y))
-
-    """
-    num train_events_infor: 3044, train_events_labels: 3044
-    num val_events_infor: 762, val_events_labels: 762
-    Counter events_infor: Counter({0: 1537, 1: 1170, 2: 1099})
-    Counter train_events_labels: Counter({0: 1229, 1: 936, 2: 879})
-    Counter val_events_labels: Counter({0: 308, 1: 234, 2: 220})
-    """

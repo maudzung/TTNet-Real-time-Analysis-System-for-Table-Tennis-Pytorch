@@ -14,12 +14,14 @@ from tqdm import tqdm
 
 sys.path.append('../')
 
-from data_process.ttnet_dataloader import create_train_val_dataloader, create_test_dataloader
-from training.train_utils import get_model, get_optimizer, get_lr_scheduler, get_saved_state, load_pretrained_model
-from training.train_utils import make_data_parallel, resume_model, save_checkpoint, get_num_parameters, freeze_model
+from data_process.ttnet_dataloader import create_train_val_dataloader
+from models.model_utils import create_model, load_pretrained_model, make_data_parallel, resume_model, get_num_parameters
+from models.model_utils import freeze_model
+from training.train_utils import create_optimizer, create_lr_scheduler, get_saved_state, save_checkpoint
 from utils.misc import AverageMeter, ProgressMeter
 from utils.logger import Logger
 from config.config import parse_configs
+from data_process.data_prefetcher import data_prefetcher
 
 
 def main():
@@ -85,7 +87,7 @@ def main_worker(gpu_idx, configs):
         tb_writer = None
 
     # model
-    model = get_model(configs)
+    model = create_model(configs)
 
     # Data Parallel
     model = make_data_parallel(model, configs)
@@ -97,8 +99,8 @@ def main_worker(gpu_idx, configs):
         num_parameters = get_num_parameters(model)
         logger.info('number of trained parameters of the model: {}'.format(num_parameters))
 
-    optimizer = get_optimizer(configs, model, is_warm_up=False)
-    lr_scheduler = get_lr_scheduler(optimizer, configs)
+    optimizer = create_optimizer(configs, model)
+    lr_scheduler = create_lr_scheduler(optimizer, configs)
     best_val_loss = np.inf
     earlystop_count = 0
 
@@ -213,26 +215,21 @@ def train_one_epoch(train_loader, model, optimizer, epoch, configs, logger):
         len(train_loader),
         [batch_time, data_time, losses],
         prefix="Train - Epoch: [{}]".format(epoch))
+    prefetcher = data_prefetcher(train_loader, configs.device)
 
+    origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, target_events, target_seg = prefetcher.next()
     # switch to train mode
     model.train()
     start_time = time.time()
-    for batch_idx, (
-            origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg) in enumerate(
-        tqdm(train_loader)):
+    batch_idx = -1
+    while origin_imgs is not None:
+        batch_idx += 1
         data_time.update(time.time() - start_time)
         batch_size = resized_imgs.size(0)
-        target_seg = target_seg.to(configs.device, non_blocking=True)
-        resized_imgs = resized_imgs.to(configs.device, non_blocking=True).float()
-        # Only move origin_imgs to cuda if the model has local stage for ball detection
-        if not configs.no_local:
-            origin_imgs = origin_imgs.to(configs.device, non_blocking=True).float()
-            # compute output
-            pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy, total_loss, _ = model(
-                origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg)
-        else:
-            pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy, total_loss, _ = model(
-                None, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg)
+        # target_seg = target_seg.to(configs.device, non_blocking=True)
+        # resized_imgs = resized_imgs.to(configs.device, non_blocking=True).float()
+        pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy, total_loss, _ = model(
+            origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, target_events, target_seg)
         # For torch.nn.DataParallel case
         if (not configs.distributed) and (configs.gpu_idx is None):
             total_loss = torch.mean(total_loss)
@@ -253,6 +250,7 @@ def train_one_epoch(train_loader, model, optimizer, epoch, configs, logger):
                 logger.info(progress.get_message(batch_idx))
 
         start_time = time.time()
+        origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, target_events, target_seg = prefetcher.next()
 
     return losses.avg
 
@@ -271,7 +269,7 @@ def validate_one_epoch(val_loader, model, epoch, configs, logger):
     with torch.no_grad():
         start_time = time.time()
         for batch_idx, (
-                origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg) in enumerate(
+                origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, target_events, target_seg) in enumerate(
             tqdm(val_loader)):
             data_time.update(time.time() - start_time)
             batch_size = resized_imgs.size(0)
@@ -282,10 +280,10 @@ def validate_one_epoch(val_loader, model, epoch, configs, logger):
                 origin_imgs = origin_imgs.to(configs.device, non_blocking=True).float()
                 # compute output
                 pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy, total_loss, _ = model(
-                    origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg)
+                    origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, target_events, target_seg)
             else:
                 pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy, total_loss, _ = model(
-                    None, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg)
+                    None, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, target_events, target_seg)
             # For torch.nn.DataParallel case
             if (not configs.distributed) and (configs.gpu_idx is None):
                 total_loss = torch.mean(total_loss)

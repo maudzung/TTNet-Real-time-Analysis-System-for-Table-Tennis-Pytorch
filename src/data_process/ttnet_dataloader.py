@@ -30,15 +30,14 @@ def create_train_val_dataloader(configs):
         Random_Rotate(rotation_angle_limit=15, p=0.5),
     ], p=1.)
     val_transform = None
-    resize_transform = Resize(new_size=tuple(configs.input_size), p=1.0)
 
-    train_events_infor, val_events_infor = train_val_data_separation(configs)
+    train_events_infor, val_events_infor, *_ = train_val_data_separation(configs)
 
-    train_dataset = TTNet_Dataset(train_events_infor, configs.events_dict, configs.input_size,
-                                  transform=train_transform, resize=resize_transform, num_samples=configs.num_samples)
+    train_dataset = TTNet_Dataset(train_events_infor, configs.org_size, configs.input_size, transform=train_transform,
+                                  num_samples=configs.num_samples, no_local=configs.no_local)
     if not configs.no_val:
-        val_dataset = TTNet_Dataset(val_events_infor, configs.events_dict, configs.input_size, transform=val_transform,
-                                    resize=resize_transform, num_samples=configs.num_samples)
+        val_dataset = TTNet_Dataset(val_events_infor, configs.org_size, configs.input_size, transform=val_transform,
+                                    num_samples=configs.num_samples, no_local=configs.no_local)
     if configs.distributed:
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
         if not configs.no_val:
@@ -61,12 +60,11 @@ def create_test_dataloader(configs):
     """Create dataloader for testing phase"""
 
     test_transform = None
-    resize_transform = Resize(new_size=tuple(configs.input_size), p=1.0)
 
     dataset_type = 'test'
     test_events_infor, test_events_labels = get_events_infor(configs.test_game_list, configs, dataset_type)
-    test_dataset = TTNet_Dataset(test_events_infor, configs.events_dict, configs.input_size, transform=test_transform,
-                                 resize=resize_transform, num_samples=configs.num_samples)
+    test_dataset = TTNet_Dataset(test_events_infor, configs.org_size, configs.input_size, transform=test_transform,
+                                 num_samples=configs.num_samples, no_local=configs.no_local)
 
     test_dataloader = DataLoader(test_dataset, batch_size=configs.batch_size, shuffle=False,
                                  pin_memory=configs.pin_memory, num_workers=configs.num_workers)

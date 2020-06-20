@@ -68,7 +68,7 @@ class Resize(object):
             # Adjust ball position
             w_ratio = w / self.new_size[0]
             h_ratio = h / self.new_size[1]
-            ball_position_xy = [int(ball_position_xy[0] / w_ratio), int(ball_position_xy[1] / h_ratio)]
+            ball_position_xy = np.array([ball_position_xy[0] / w_ratio, ball_position_xy[1] / h_ratio])
 
         return imgs, ball_position_xy, seg_img
 
@@ -100,15 +100,16 @@ class Random_Crop(object):
             # crop seg_img
             seg_img_h, seg_img_w, _ = seg_img.shape
             # 1. Resize to original
-            seg_img = cv2.resize(seg_img, (w, h), interpolation=self.interpolation)
+            if (seg_img_h != h) or (seg_img_w != w):
+                seg_img = cv2.resize(seg_img, (w, h), interpolation=self.interpolation)
             # 2. Crop
             seg_img = seg_img[min_y:max_y, min_x:max_x, :]
             # 3. Resize to (128, 320, 3)
             seg_img = cv2.resize(seg_img, (seg_img_w, seg_img_h), interpolation=self.interpolation)
 
             # Adjust ball position
-            ball_position_xy = [int((ball_position_xy[0] - min_x) * w_ratio),
-                                int((ball_position_xy[1] - min_y) * h_ratio)]
+            ball_position_xy = np.array([(ball_position_xy[0] - min_x) * w_ratio,
+                                         (ball_position_xy[1] - min_y) * h_ratio])
 
         return imgs, ball_position_xy, seg_img
 
@@ -129,12 +130,14 @@ class Random_Rotate(object):
 
             # Adjust ball position, apply the same rotate_matrix for the sequential images
             ball_position_xy = rotate_matrix.dot(np.array([ball_position_xy[0], ball_position_xy[1], 1.]).T)
-            ball_position_xy = ball_position_xy.astype(np.int)
 
             # Rotate seg_img
             seg_h, seg_w, seg_c = seg_img.shape
-            seg_center = (int(seg_w / 2), int(seg_h / 2))
-            seg_rotate_matrix = cv2.getRotationMatrix2D(seg_center, random_angle, 1.)
+            if (seg_h != h) or (seg_w != w):
+                seg_center = (int(seg_w / 2), int(seg_h / 2))
+                seg_rotate_matrix = cv2.getRotationMatrix2D(seg_center, random_angle, 1.)
+            else:
+                seg_rotate_matrix = rotate_matrix
             seg_img = cv2.warpAffine(seg_img, seg_rotate_matrix, (seg_w, seg_h), flags=cv2.INTER_LINEAR)
 
         return imgs, ball_position_xy, seg_img
@@ -153,6 +156,6 @@ class Random_HFlip(object):
             seg_img = cv2.flip(seg_img, 1)
 
             # Adjust ball position: Same y, new x = w - x
-            ball_position_xy = [w - ball_position_xy[0], ball_position_xy[1]]
+            ball_position_xy[0] = w - ball_position_xy[0]
 
         return imgs, ball_position_xy, seg_img

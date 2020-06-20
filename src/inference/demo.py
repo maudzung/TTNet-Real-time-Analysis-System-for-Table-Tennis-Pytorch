@@ -20,7 +20,7 @@ import numpy as np
 sys.path.append('../')
 
 from data_process.ttnet_video_loader import TTNet_Video_Loader
-from training.train_utils import get_model, load_pretrained_model
+from models.model_utils import create_model, load_pretrained_model
 from config.config import parse_configs
 from inference.post_processing import post_processing
 
@@ -37,7 +37,7 @@ def demo(configs):
     configs.device = torch.device('cuda:{}'.format(configs.gpu_idx))
 
     # model
-    model = get_model(configs)
+    model = create_model(configs)
     model.cuda()
 
     assert configs.pretrained_path is not None, "Need to load the pre-trained model"

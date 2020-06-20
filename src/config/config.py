@@ -55,6 +55,8 @@ def parse_configs():
                         help='If true, use all data for training, no validation set')
     parser.add_argument('--val-size', type=float, default=0.2,
                         help='The size of validation set')
+    parser.add_argument('--smooth-labelling', action='store_true',
+                        help='If true, smoothly make the labels of event spotting')
     parser.add_argument('--num_samples', type=int, default=None,
                         help='Take a subset of the dataset to run and debug')
     parser.add_argument('--num_workers', type=int, default=8,
@@ -200,6 +202,7 @@ def parse_configs():
     configs.num_events = len(configs.events_weights_loss_dict)  # Just "bounce" and "net hits"
     configs.num_frames_sequence = 9
 
+    configs.org_size = (1920, 1080)
     configs.input_size = (320, 128)
 
     configs.tasks = ['global', 'local', 'event', 'seg']
@@ -222,9 +225,7 @@ def parse_configs():
         'event': configs.event_weight,
         'seg': configs.seg_weight
     }
-    configs.tasks_loss_weight = []
-    for task in configs.tasks:
-        configs.tasks_loss_weight.append(loss_weight_dict[task])
+    configs.tasks_loss_weight = [loss_weight_dict[task] for task in configs.tasks]
 
     configs.freeze_modules_list = []
     if configs.freeze_global:
