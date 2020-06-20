@@ -17,14 +17,14 @@ An introduction of the project could be found [here (from the authors)](https://
 - [x] [Multi-Task learning](https://arxiv.org/pdf/1705.07115.pdf)
 - [x] [Distributed Data Parallel Training](https://github.com/pytorch/examples/tree/master/distributed/ddp)
 - [x] Enable/Disable modules in the TTNet model
-- [x] Evaluate
+- [x] Smooth labeling for event spotting
 - [x] TensorboardX
 
 ## 2. Getting Started
 ### Requirement
 
 ```shell script
-pip install -r requirement.txt
+pip install -U -r requirement.txt
 ```
 
 Other instruction for setting up virtual environments is [here](https://github.com/maudzung/virtual_environment_python3)
@@ -108,7 +108,7 @@ The performance of the TTNet strongly depends on the global stage for ball detec
  
 ```shell script
 cd src/training/
-./train_no_local_no_event.sh
+./train_1st_phase.sh
 ```  
 
 - **2nd phase**: Load the trained weights to the global and the segmentation part, initialize the weight of the local stage with the weights of
@@ -116,14 +116,14 @@ the global stage. In this phase, we train and just update weights of the local a
 
 ```shell script
 cd src/training/
-./train_full_freeze_global_freeze_seg.sh
+./train_2nd_phase.sh
 ```
 
 - **3rd phase**: Fine tune all modules. Train the network with only 9 epochs
 
 ```shell script
 cd src/training/
-./train_full_fine_tune_all_modules.sh
+./train_3rd_phase.sh
 ```
 
   
@@ -147,18 +147,27 @@ We can set the thresholds of the segmentation and event spotting modules in `tes
 
 ```shell script
 cd src/inference/
-./test.sh
+./test_3rd_phase.sh
 ```
 
+#### 2.3.5. Demo:
+
+Run a demonstration with an input video:
+
+```shell script
+cd src/inference/
+./demo.sh
+```
 
 ## Usage
 ```
-python main.py [-h] [--seed SEED] [--saved_fn FN] [-a ARCH] [--dropout_p P]
+usage: main.py [-h] [--seed SEED] [--saved_fn FN] [-a ARCH] [--dropout_p P]
                [--multitask_learning] [--no_local] [--no_event] [--no_seg]
                [--pretrained_path PATH] [--overwrite_global_2_local]
-               [--no-val] [--val-size VAL_SIZE] [--num_samples NUM_SAMPLES]
-               [--num_workers NUM_WORKERS] [--batch_size BATCH_SIZE]
-               [--print_freq N] [--checkpoint_freq N] [--sigma SIGMA]
+               [--no-val] [--val-size VAL_SIZE] [--smooth-labelling]
+               [--num_samples NUM_SAMPLES] [--num_workers NUM_WORKERS]
+               [--batch_size BATCH_SIZE] [--print_freq N]
+               [--checkpoint_freq N] [--sigma SIGMA]
                [--thresh_ball_pos_mask THRESH] [--start_epoch N]
                [--num_epochs N] [--lr LR] [--minimum_lr MIN_LR] [--momentum M]
                [-wd WD] [--optimizer_type OPTIMIZER] [--lr_type SCHEDULER]
@@ -172,7 +181,8 @@ python main.py [-h] [--seed SEED] [--saved_fn FN] [-a ARCH] [--dropout_p P]
                [--gpu_idx GPU_IDX] [--no_cuda] [--multiprocessing-distributed]
                [--evaluate] [--resume_path PATH] [--use_best_checkpoint]
                [--seg_thresh SEG_THRESH] [--event_thresh EVENT_THRESH]
-               [--save_test_output]
+               [--save_test_output] [--video_path PATH] [--output_format PATH]
+               [--show_image] [--save_demo_output]
 
 TTNet Implementation
 
@@ -191,10 +201,10 @@ optional arguments:
   --pretrained_path PATH
                         the path of the pretrained checkpoint
   --overwrite_global_2_local
-                        If true, the weights of the local stage will be
-                        overwritten by the global stage.
+                        If true, the weights of the local stage will be overwritten by the global stage.
   --no-val              If true, use all data for training, no validation set
   --val-size VAL_SIZE   The size of validation set
+  --smooth-labelling    If true, smoothly make the labels of event spotting
   --num_samples NUM_SAMPLES
                         Take a subset of the dataset to run and debug
   --num_workers NUM_WORKERS
@@ -205,11 +215,9 @@ optional arguments:
                         Parallel or Distributed Data Parallel
   --print_freq N        print frequency (default: 10)
   --checkpoint_freq N   frequency of saving checkpoints (default: 3)
-  --sigma SIGMA         standard deviation of the 1D Gaussian for the ball
-                        position target
+  --sigma SIGMA         standard deviation of the 1D Gaussian for the ball position target
   --thresh_ball_pos_mask THRESH
-                        the lower thresh for the 1D Gaussian of the ball
-                        position target
+                        the lower thresh for the 1D Gaussian of the ball position target
   --start_epoch N       the starting epoch
   --num_epochs N        number of total epochs to run
   --lr LR               initial learning rate
@@ -223,29 +231,21 @@ optional arguments:
                         ReduceonPlateau)
   --lr_factor FACTOR    reduce the learning rate with this factor
   --lr_step_size STEP_SIZE
-                        step_size of the learning rate when using steplr
-                        scheduler
-  --lr_patience N       patience of the learning rate when using
-                        ReduceoPlateau scheduler
+                        step_size of the learning rate when using steplr scheduler
+  --lr_patience N       patience of the learning rate when using ReduceoPlateau scheduler
   --earlystop_patience N
                         Early stopping the training process if performance is
                         not improved within this value
-  --freeze_global       If true, no update/train weights for the global stage
-                        of ball detection.
-  --freeze_local        If true, no update/train weights for the local stage
-                        of ball detection.
+  --freeze_global       If true, no update/train weights for the global stage of ball detection.
+  --freeze_local        If true, no update/train weights for the local stage of ball detection.
   --freeze_event        If true, no update/train weights for the event module.
-  --freeze_seg          If true, no update/train weights for the segmentation
-                        module.
+  --freeze_seg          If true, no update/train weights for the segmentation module.
   --bce_weight BCE_WEIGHT
-                        The weight of BCE loss in segmentation module, the
-                        dice_loss weight = 1- bce_weight
+                        The weight of BCE loss in segmentation module, the dice_loss weight = 1- bce_weight
   --global_weight GLOBAL_WEIGHT
-                        The weight of loss of the global stage for ball
-                        detection
+                        The weight of loss of the global stage for ball detection
   --local_weight LOCAL_WEIGHT
-                        The weight of loss of the local stage for ball
-                        detection
+                        The weight of loss of the local stage for ball detection
   --event_weight EVENT_WEIGHT
                         The weight of loss of the event spotting module
   --seg_weight SEG_WEIGHT
@@ -265,11 +265,14 @@ optional arguments:
   --evaluate            only evaluate the model, not training
   --resume_path PATH    the path of the resumed checkpoint
   --use_best_checkpoint
-                        If true, choose the best model on val set, otherwise
-                        choose the last model
+                        If true, choose the best model on val set, otherwise choose the last model
   --seg_thresh SEG_THRESH
                         threshold of the segmentation output
   --event_thresh EVENT_THRESH
                         threshold of the event spotting output
   --save_test_output    If true, the image of testing phase will be saved
+  --video_path PATH     the path of the video that needs to demo
+  --output_format PATH  the type of the demo output
+  --show_image          If true, show the image during demostration
+  --save_demo_output    If true, the image of demonstration phase will be saved
 ```
