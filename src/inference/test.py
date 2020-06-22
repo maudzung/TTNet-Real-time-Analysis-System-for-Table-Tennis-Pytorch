@@ -19,6 +19,7 @@ from models.model_utils import make_data_parallel, get_num_parameters
 from utils.misc import AverageMeter
 from config.config import parse_configs
 from inference.post_processing import get_prediction_ball_pos, get_prediction_seg, prediction_get_events
+from inference.metrics import SPCE, PCE
 
 
 def main():
@@ -77,11 +78,12 @@ def main_worker(gpu_idx, configs):
 def test(test_loader, model, configs):
     batch_time = AverageMeter('Time', ':6.3f')
     data_time = AverageMeter('Data', ':6.3f')
-    acc_event = AverageMeter('Acc_Event', ':6.4f')
     iou_seg = AverageMeter('IoU_Seg', ':6.4f')
     mse_global = AverageMeter('MSE_Global', ':6.4f')
     mse_local = AverageMeter('MSE_Local', ':6.4f')
-
+    mse_overall = AverageMeter('MSE_Overall', ':6.4f')
+    pce = AverageMeter('PCE', ':6.4f')
+    spce = AverageMeter('Smooth_PCE', ':6.4f')
     w_original = 1920.
     h_original = 1080.
     w, h = configs.input_size
@@ -91,7 +93,7 @@ def test(test_loader, model, configs):
     with torch.no_grad():
         start_time = time.time()
         for batch_idx, (
-                origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg) in enumerate(
+                origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, target_events, target_seg) in enumerate(
             tqdm(test_loader)):
 
             print('\n===================== batch_idx: {} ================================'.format(batch_idx))
@@ -104,15 +106,14 @@ def test(test_loader, model, configs):
             if 'local' in configs.tasks:
                 origin_imgs = origin_imgs.to(configs.device, non_blocking=True).float()
                 pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy, total_loss, _ = model(
-                    origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg)
+                    origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, target_events, target_seg)
             else:
                 pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy, total_loss, _ = model(
-                    None, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, event_class, target_seg)
+                    None, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, target_events, target_seg)
             org_ball_pos_xy = org_ball_pos_xy.numpy()
             global_ball_pos_xy = global_ball_pos_xy.numpy()
             # Transfer output to cpu
             target_seg = target_seg.cpu().numpy()
-            local_ball_pos_xy = local_ball_pos_xy.cpu().numpy()  # Ground truth of the local stage
 
             for sample_idx in range(batch_size):
                 # Get target
@@ -124,9 +125,10 @@ def test(test_loader, model, configs):
                                                                            configs.thresh_ball_pos_mask)
 
                 # Calculate the MSE
-                if (sample_global_ball_pos_xy[0] > 0) and (sample_global_ball_pos_xy[1] > 0):
-                    mse = (sample_prediction_ball_global_xy[0] - sample_global_ball_pos_xy[0]) ** 2 + (
-                            sample_prediction_ball_global_xy[1] - sample_global_ball_pos_xy[1]) ** 2
+                if (sample_global_ball_pos_xy[0] > 0) and (sample_global_ball_pos_xy[1] > 0) and (
+                        sample_prediction_ball_global_xy[0] > 0) and (sample_prediction_ball_global_xy[1] > 0):
+                    mse = (sample_prediction_ball_global_xy[0] - sample_global_ball_pos_xy[0]) ** 2 + \
+                          (sample_prediction_ball_global_xy[1] - sample_global_ball_pos_xy[1]) ** 2
                     mse_global.update(mse)
 
                 print('\nBall Detection - \t Global stage: \t (x, y) - gt = ({}, {}), prediction = ({}, {})'.format(
@@ -139,6 +141,7 @@ def test(test_loader, model, configs):
                 # Process local ball stage
                 if pred_ball_local is not None:
                     # Get target
+                    local_ball_pos_xy = local_ball_pos_xy.cpu().numpy()  # Ground truth of the local stage
                     sample_local_ball_pos_xy = local_ball_pos_xy[sample_idx]  # Target
                     # Process the local stage
                     sample_pred_ball_local = pred_ball_local[sample_idx]
@@ -160,24 +163,21 @@ def test(test_loader, model, configs):
                 print('Ball Detection - \t Overall: \t (x, y) - org: ({}, {}), prediction = ({}, {})'.format(
                     sample_org_ball_pos_xy[0], sample_org_ball_pos_xy[1], int(sample_pred_org_x),
                     int(sample_pred_org_y)))
+                mse = (sample_org_ball_pos_xy[0] - sample_pred_org_x) ** 2 + (
+                        sample_org_ball_pos_xy[1] - sample_pred_org_y) ** 2
+                mse_overall.update(mse)
 
                 # Process event stage
                 if pred_events is not None:
-                    sample_target_event = event_class[sample_idx].item()
-                    vec_sample_target_event = np.zeros((2,), dtype=np.int)
-                    if sample_target_event < 2:
-                        vec_sample_target_event[sample_target_event] = 1
+                    sample_target_events = target_events[sample_idx].numpy()
                     sample_prediction_events = prediction_get_events(pred_events[sample_idx], configs.event_thresh)
                     print(
                         'Event Spotting - \t gt = (is bounce: {}, is net: {}), prediction: (is bounce: {:.4f}, is net: {:.4f})'.format(
-                            vec_sample_target_event[0], vec_sample_target_event[1], pred_events[sample_idx][0],
+                            sample_target_events[0], sample_target_events[1], pred_events[sample_idx][0],
                             pred_events[sample_idx][1]))
-                    diff = sample_prediction_events - vec_sample_target_event
-                    # Check correct or not
-                    if np.sum(diff) != 0:  # Incorrect
-                        acc_event.update(0)
-                    else:  # Correct
-                        acc_event.update(1)
+                    # Compute metrics
+                    spce.update(SPCE(sample_prediction_events, sample_target_events, thresh=0.5))
+                    pce.update(PCE(sample_prediction_events, sample_target_events))
 
                 # Process segmentation stage
                 if pred_seg is not None:
@@ -201,8 +201,8 @@ def test(test_loader, model, configs):
                         target_title = 'target seg'
                         pred_title = 'pred seg'
                         if pred_events is not None:
-                            target_title += ', is bounce: {}, is net: {}'.format(vec_sample_target_event[0],
-                                                                                 vec_sample_target_event[1])
+                            target_title += ', is bounce: {}, is net: {}'.format(sample_target_events[0],
+                                                                                 sample_target_events[1])
                             pred_title += ', is bounce: {}, is net: {}'.format(sample_prediction_events[0],
                                                                                sample_prediction_events[1])
 
@@ -214,17 +214,15 @@ def test(test_loader, model, configs):
 
             if ((batch_idx + 1) % configs.print_freq) == 0:
                 print(
-                    'batch_idx: {} - Average acc_event: {:.4f}, iou_seg: {:.4f}, mse_global: {:.1f}, mse_local: {:.1f}'.format(
-                        batch_idx, acc_event.avg, iou_seg.avg, mse_global.avg, mse_local.avg))
+                    'batch_idx: {} - Average iou_seg: {:.4f}, mse_global: {:.1f}, mse_local: {:.1f}, mse_overall: {:.1f}, pce: {:.4f} spce: {:.4f}'.format(
+                        batch_idx, iou_seg.avg, mse_global.avg, mse_local.avg, mse_overall.avg, pce.avg, spce.avg))
 
             batch_time.update(time.time() - start_time)
-
             start_time = time.time()
 
-    print('Average acc_event: {:.4f}, iou_seg: {:.4f}, mse_global: {:.1f}, mse_local: {:.1f}'.format(acc_event.avg,
-                                                                                                     iou_seg.avg,
-                                                                                                     mse_global.avg,
-                                                                                                     mse_local.avg))
+    print(
+        'Average iou_seg: {:.4f}, mse_global: {:.1f}, mse_local: {:.1f}, mse_overall: {:.1f}, pce: {:.4f} spce: {:.4f}'.format(
+            iou_seg.avg, mse_global.avg, mse_local.avg, mse_overall.avg, pce.avg, spce.avg))
     print('Done testing')
 
 
