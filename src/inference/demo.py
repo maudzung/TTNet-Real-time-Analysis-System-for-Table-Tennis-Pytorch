@@ -11,11 +11,11 @@
 
 import os
 import sys
-import torch
 from collections import deque
 
 import cv2
 import numpy as np
+import torch
 
 sys.path.append('../')
 
@@ -23,6 +23,7 @@ from data_process.ttnet_video_loader import TTNet_Video_Loader
 from models.model_utils import create_model, load_pretrained_model
 from config.config import parse_configs
 from inference.post_processing import post_processing
+from utils.misc import time_synchronized
 
 
 def demo(configs):
@@ -58,7 +59,9 @@ def demo(configs):
             # Expand the first dim
             resized_imgs = torch.from_numpy(resized_imgs).to(configs.device, non_blocking=True).float().unsqueeze(0)
             origin_imgs = torch.from_numpy(origin_imgs).to(configs.device, non_blocking=True).float().unsqueeze(0)
+            t1 = time_synchronized()
             pred_ball_global, pred_ball_local, pred_events, pred_seg = model.run_demo(origin_imgs, resized_imgs)
+            t2 = time_synchronized()
             prediction_global, prediction_local, prediction_seg, prediction_events = post_processing(
                 pred_ball_global, pred_ball_local, pred_events, pred_seg, configs.input_size[0],
                 configs.thresh_ball_pos_mask, configs.seg_thresh, configs.event_thresh)
@@ -89,6 +92,7 @@ def demo(configs):
             queue_frames.append(frame_pred_infor)
 
             frame_idx += 1
+            print('Done frame_idx {} - time {:.3f}s'.format(frame_idx, t2 - t1))
 
     if configs.output_format == 'video':
         output_video_path = os.path.join(configs.save_demo_dir, 'result.mp4')
