@@ -101,7 +101,7 @@ def plot_detection(img, ball_pos, seg_img, events):
     """Show the predicted information in the image"""
     img = cv2.addWeighted(img, 1., seg_img * 255, 0.3, 0)
     img = cv2.circle(img, tuple(ball_pos), 5, (255, 0, 255), -1)
-    event_name = 'is bounce: {}, is net: {}'.format(events[0], events[1])
+    event_name = 'is bounce: {:.2f}, is net: {:.2f}'.format(events[0], events[1])
     img = cv2.putText(img, event_name, (100, 200), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 1, cv2.LINE_AA)
 
     return img
