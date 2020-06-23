@@ -11,9 +11,10 @@
 
 import copy
 import os
+import math
 
 import torch
-from torch.optim.lr_scheduler import StepLR, ReduceLROnPlateau
+from torch.optim.lr_scheduler import StepLR, ReduceLROnPlateau, LambdaLR
 import torch.distributed as dist
 
 
@@ -41,6 +42,13 @@ def create_lr_scheduler(optimizer, configs):
         lr_scheduler = StepLR(optimizer, step_size=configs.lr_step_size, gamma=configs.lr_factor)
     elif configs.lr_type == 'plateau':
         lr_scheduler = ReduceLROnPlateau(optimizer, factor=configs.lr_factor, patience=configs.lr_patience)
+    elif configs.optimizer_type == 'cosin':
+        # Scheduler https://arxiv.org/pdf/1812.01187.pdf
+        lf = lambda x: (((1 + math.cos(x * math.pi / configs.num_epochs)) / 2) ** 1.0) * 0.9 + 0.1  # cosine
+        scheduler = LambdaLR(optimizer, lr_lambda=lf)
+        scheduler.last_epoch = configs.start_epoch - 1  # do not move
+        # https://discuss.pytorch.org/t/a-problem-occured-when-resuming-an-optimizer/28822
+        # plot_lr_scheduler(optimizer, scheduler, epochs)
     else:
         raise TypeError
 

@@ -53,6 +53,8 @@ def parse_configs():
     ####################################################################
     parser.add_argument('--no-val', action='store_true',
                         help='If true, use all data for training, no validation set')
+    parser.add_argument('--no-test', action='store_true',
+                        help='If true, dont evaluate the model on the test set')
     parser.add_argument('--val-size', type=float, default=0.2,
                         help='The size of validation set')
     parser.add_argument('--smooth-labelling', action='store_true',
@@ -99,7 +101,7 @@ def parse_configs():
                         help='step_size of the learning rate when using steplr scheduler')
     parser.add_argument('--lr_patience', type=int, default=3, metavar='N',
                         help='patience of the learning rate when using ReduceoPlateau scheduler')
-    parser.add_argument('--earlystop_patience', type=int, default=12, metavar='N',
+    parser.add_argument('--earlystop_patience', type=int, default=None, metavar='N',
                         help='Early stopping the training process if performance is not improved within this value')
     parser.add_argument('--freeze_global', action='store_true',
                         help='If true, no update/train weights for the global stage of ball detection.')
