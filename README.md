@@ -20,6 +20,8 @@ An introduction of the project could be found [here (from the authors)](https://
 - [x] Smooth labeling for event spotting
 - [x] TensorboardX
 
+- (Update 2020.06.23): Training much faster, achieve **> 120 FPS** in the inference phase.
+
 ## 2. Getting Started
 ### Requirement
 
