@@ -18,6 +18,7 @@ from data_process.ttnet_dataloader import create_train_val_dataloader, create_te
 from models.model_utils import create_model, load_pretrained_model, make_data_parallel, resume_model, get_num_parameters
 from models.model_utils import freeze_model
 from training.train_utils import create_optimizer, create_lr_scheduler, get_saved_state, save_checkpoint
+from training.train_utils import reduce_tensor, to_python_float
 from utils.misc import AverageMeter, ProgressMeter
 from utils.logger import Logger
 from config.config import parse_configs
@@ -224,8 +225,13 @@ def train_one_epoch(train_loader, model, optimizer, epoch, configs, logger):
         total_loss.backward()
         optimizer.step()
 
-        losses.update(total_loss.item(), batch_size)
+        if configs.distributed:
+            reduced_loss = reduce_tensor(total_loss.data, configs.world_size)
+        else:
+            reduced_loss = total_loss.data
+        losses.update(to_python_float(reduced_loss), batch_size)
         # measure elapsed time
+        torch.cuda.synchronize()
         batch_time.update(time.time() - start_time)
 
         # Log message
@@ -262,8 +268,13 @@ def evaluate_one_epoch(val_loader, model, epoch, configs, logger):
             if (not configs.distributed) and (configs.gpu_idx is None):
                 total_loss = torch.mean(total_loss)
 
-            losses.update(total_loss.item(), batch_size)
+            if configs.distributed:
+                reduced_loss = reduce_tensor(total_loss.data, configs.world_size)
+            else:
+                reduced_loss = total_loss.data
+            losses.update(to_python_float(reduced_loss), batch_size)
             # measure elapsed time
+            torch.cuda.synchronize()
             batch_time.update(time.time() - start_time)
 
             # Log message

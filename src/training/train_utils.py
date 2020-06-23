@@ -45,8 +45,8 @@ def create_lr_scheduler(optimizer, configs):
     elif configs.optimizer_type == 'cosin':
         # Scheduler https://arxiv.org/pdf/1812.01187.pdf
         lf = lambda x: (((1 + math.cos(x * math.pi / configs.num_epochs)) / 2) ** 1.0) * 0.9 + 0.1  # cosine
-        scheduler = LambdaLR(optimizer, lr_lambda=lf)
-        scheduler.last_epoch = configs.start_epoch - 1  # do not move
+        lr_scheduler = LambdaLR(optimizer, lr_lambda=lf)
+        lr_scheduler.last_epoch = configs.start_epoch - 1  # do not move
         # https://discuss.pytorch.org/t/a-problem-occured-when-resuming-an-optimizer/28822
         # plot_lr_scheduler(optimizer, scheduler, epochs)
     else:
@@ -90,3 +90,10 @@ def reduce_tensor(tensor, world_size):
     dist.all_reduce(rt, op=dist.reduce_op.SUM)
     rt /= world_size
     return rt
+
+
+def to_python_float(t):
+    if hasattr(t, 'item'):
+        return t.item()
+    else:
+        return t[0]
