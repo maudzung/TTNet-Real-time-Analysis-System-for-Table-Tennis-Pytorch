@@ -259,7 +259,7 @@ class TTNet(nn.Module):
         h_original, w_original = 1080, 1920
         h_ratio = h_original / self.h_resize
         w_ratio = w_original / self.w_resize
-        pred_ball_global_mask = pred_ball_global.data
+        pred_ball_global_mask = pred_ball_global.clone().detach()
         pred_ball_global_mask[pred_ball_global_mask < self.thresh_ball_pos_mask] = 0.
 
         # Crop the original images
