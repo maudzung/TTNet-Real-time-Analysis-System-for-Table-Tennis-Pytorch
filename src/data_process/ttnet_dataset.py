@@ -24,7 +24,7 @@ from data_process.ttnet_data_utils import load_raw_img
 
 
 class TTNet_Dataset(Dataset):
-    def __init__(self, events_infor, org_size, input_size, transform=None, num_samples=None, no_local=False):
+    def __init__(self, events_infor, org_size, input_size, transform=None, num_samples=None):
         self.events_infor = events_infor
         self.w_org = org_size[0]
         self.h_org = org_size[1]
@@ -35,7 +35,6 @@ class TTNet_Dataset(Dataset):
         self.transform = transform
         if num_samples is not None:
             self.events_infor = self.events_infor[:num_samples]
-        self.no_local = no_local
 
     def __len__(self):
         return len(self.events_infor)
@@ -52,7 +51,7 @@ class TTNet_Dataset(Dataset):
         img_path_list, org_ball_pos_xy, target_events, seg_path = self.events_infor[index]
         # Load segmentation
         seg_img = load_raw_img(seg_path)
-        self.jpeg_reader = TurboJPEG()
+        self.jpeg_reader = TurboJPEG()  # improve it later (Only initialize it once)
         # Load a sequence of images (-4, 4), resize images before stacking them together
         # Use TurboJPEG to speed up the loading images' phase
         resized_imgs = []
@@ -70,12 +69,6 @@ class TTNet_Dataset(Dataset):
         # Adjust ball pos: (320, 128) --> full HD
         org_ball_pos_xy = self.__resize_ball_pos__(global_ball_pos_xy, 1. / self.w_resize_ratio,
                                                    1. / self.h_resize_ratio)
-        # Only need the original images if the TTNet has the local stage for ball detection
-        if not self.no_local:
-            origin_imgs = cv2.resize(resized_imgs, (self.w_org, self.h_org))
-            origin_imgs = origin_imgs.transpose(2, 0, 1)
-        else:
-            origin_imgs = np.zeros((1,))  # Just dummy
         # If the ball position is outside of the resized image, set position to -1, -1 --> No ball (just for safety)
         self.__check_ball_pos__(org_ball_pos_xy, self.w_org, self.h_org)
         self.__check_ball_pos__(global_ball_pos_xy, self.w_input, self.h_input)
@@ -87,13 +80,15 @@ class TTNet_Dataset(Dataset):
         target_seg[target_seg < 75] = 0.
         target_seg[target_seg >= 75] = 1.
 
-        return origin_imgs, resized_imgs, org_ball_pos_xy.astype(np.int), global_ball_pos_xy.astype(
-            np.int), target_events, target_seg
+        return resized_imgs, org_ball_pos_xy.astype(np.int), global_ball_pos_xy.astype(np.int), \
+               target_events, target_seg
 
 
 if __name__ == '__main__':
     import cv2
     import matplotlib.pyplot as plt
+    import torch.nn.functional as F
+    import torch
     from config.config import parse_configs
     from data_process.ttnet_data_utils import train_val_data_separation
     from data_process.transformation import Compose, Random_Crop, Resize, Random_HFlip, Random_Rotate
@@ -114,15 +109,24 @@ if __name__ == '__main__':
 
     print('len(ttnet_dataset): {}'.format(len(ttnet_dataset)))
     example_index = 100
-    origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, target_event, target_seg = ttnet_dataset.__getitem__(
+    resized_imgs, org_ball_pos_xy, global_ball_pos_xy, target_event, target_seg = ttnet_dataset.__getitem__(
         example_index)
+    if 1:
+        # Test F.interpolate, we can simply use cv2.resize() to get origin_imgs from resized_imgs
+        # Achieve better quality of images and faster
+        origin_imgs = F.interpolate(torch.from_numpy(resized_imgs).unsqueeze(0).float(), (1080, 1920))
+        origin_imgs = origin_imgs.squeeze().numpy().transpose(1, 2, 0).astype(np.uint8)
+        print('F.interpolate - origin_imgs shape: {}'.format(origin_imgs.shape))
+        resized_imgs = resized_imgs.transpose(1, 2, 0)
+        print('resized_imgs shape: {}'.format(resized_imgs.shape))
+    else:
+        # Test cv2.resize
+        resized_imgs = resized_imgs.transpose(1, 2, 0)
+        print('resized_imgs shape: {}'.format(resized_imgs.shape))
+        origin_imgs = cv2.resize(resized_imgs, (1920, 1080))
+        print('cv2.resize - origin_imgs shape: {}'.format(origin_imgs.shape))
 
-    print('target_seg shape: {}'.format(target_seg.shape))
-
-    origin_imgs = origin_imgs.transpose(1, 2, 0)
-    print('origin_imgs shape: {}'.format(origin_imgs.shape))
-
-    out_images_dir = os.path.join(configs.working_dir, 'docs', 'out_images')
+    out_images_dir = os.path.join(configs.results_dir, 'debug', 'ttnet_dataset')
     if not os.path.isdir(out_images_dir):
         os.makedirs(out_images_dir)
 
@@ -140,10 +144,7 @@ if __name__ == '__main__':
         fontsize=16)
     plt.savefig(os.path.join(out_images_dir, 'org_all_imgs_{}.jpg'.format(example_index)))
     target_seg = target_seg.transpose(1, 2, 0)
-
-    resized_imgs = resized_imgs.transpose(1, 2, 0)
-    resized_imgs = np.array(resized_imgs)
-    print('resized_imgs shape: {}'.format(resized_imgs.shape))
+    print('target_seg shape: {}'.format(target_seg.shape))
 
     plt.imsave(os.path.join(out_images_dir, 'augment_seg_img_{}.jpg'.format(example_index)), target_seg)
     for i in range(configs.num_frames_sequence):

@@ -218,20 +218,14 @@ def train_one_epoch(train_loader, model, optimizer, epoch, configs, logger):
     # switch to train mode
     model.train()
     start_time = time.time()
-    for batch_idx, (
-            origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, target_events, target_seg) in enumerate(
-        tqdm(train_loader)):
+    for batch_idx, (resized_imgs, org_ball_pos_xy, global_ball_pos_xy, target_events, target_seg) in enumerate(
+            tqdm(train_loader)):
         data_time.update(time.time() - start_time)
         batch_size = resized_imgs.size(0)
         target_seg = target_seg.to(configs.device, non_blocking=True)
         resized_imgs = resized_imgs.to(configs.device, non_blocking=True).float()
-        if not configs.no_local:
-            origin_imgs = origin_imgs.to(configs.device, non_blocking=True).float()
-            pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy, total_loss, _ = model(
-                origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, target_events, target_seg)
-        else:
-            pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy, total_loss, _ = model(
-                None, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, target_events, target_seg)
+        pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy, total_loss, _ = model(
+            resized_imgs, org_ball_pos_xy, global_ball_pos_xy, target_events, target_seg)
         # For torch.nn.DataParallel case
         if (not configs.distributed) and (configs.gpu_idx is None):
             total_loss = torch.mean(total_loss)
@@ -269,22 +263,17 @@ def validate_one_epoch(val_loader, model, epoch, configs, logger):
     model.eval()
     with torch.no_grad():
         start_time = time.time()
-        for batch_idx, (
-                origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, target_events, target_seg) in enumerate(
-            tqdm(val_loader)):
+        for batch_idx, (resized_imgs, org_ball_pos_xy, global_ball_pos_xy, target_events, target_seg) in enumerate(
+                tqdm(val_loader)):
             data_time.update(time.time() - start_time)
             batch_size = resized_imgs.size(0)
             target_seg = target_seg.to(configs.device, non_blocking=True)
             resized_imgs = resized_imgs.to(configs.device, non_blocking=True).float()
             # Only move origin_imgs to cuda if the model has local stage for ball detection
-            if not configs.no_local:
-                origin_imgs = origin_imgs.to(configs.device, non_blocking=True).float()
-                # compute output
-                pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy, total_loss, _ = model(
-                    origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, target_events, target_seg)
-            else:
-                pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy, total_loss, _ = model(
-                    None, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, target_events, target_seg)
+
+            pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy, total_loss, _ = model(
+                resized_imgs, org_ball_pos_xy, global_ball_pos_xy, target_events, target_seg)
+
             # For torch.nn.DataParallel case
             if (not configs.distributed) and (configs.gpu_idx is None):
                 total_loss = torch.mean(total_loss)

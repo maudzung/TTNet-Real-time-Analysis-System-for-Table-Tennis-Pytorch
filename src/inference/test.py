@@ -92,8 +92,7 @@ def test(test_loader, model, configs):
     model.eval()
     with torch.no_grad():
         start_time = time.time()
-        for batch_idx, (
-                origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, target_events, target_seg) in enumerate(
+        for batch_idx, (resized_imgs, org_ball_pos_xy, global_ball_pos_xy, target_events, target_seg) in enumerate(
             tqdm(test_loader)):
 
             print('\n===================== batch_idx: {} ================================'.format(batch_idx))
@@ -103,13 +102,10 @@ def test(test_loader, model, configs):
             target_seg = target_seg.to(configs.device, non_blocking=True)
             resized_imgs = resized_imgs.to(configs.device, non_blocking=True).float()
             # compute output
-            if 'local' in configs.tasks:
-                origin_imgs = origin_imgs.to(configs.device, non_blocking=True).float()
-                pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy, total_loss, _ = model(
-                    origin_imgs, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, target_events, target_seg)
-            else:
-                pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy, total_loss, _ = model(
-                    None, resized_imgs, org_ball_pos_xy, global_ball_pos_xy, target_events, target_seg)
+
+            pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy, total_loss, _ = model(
+                resized_imgs, org_ball_pos_xy, global_ball_pos_xy, target_events, target_seg)
+
             org_ball_pos_xy = org_ball_pos_xy.numpy()
             global_ball_pos_xy = global_ball_pos_xy.numpy()
             # Transfer output to cpu

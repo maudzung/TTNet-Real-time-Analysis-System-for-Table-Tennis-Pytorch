@@ -34,10 +34,10 @@ def create_train_val_dataloader(configs):
     train_events_infor, val_events_infor, *_ = train_val_data_separation(configs)
 
     train_dataset = TTNet_Dataset(train_events_infor, configs.org_size, configs.input_size, transform=train_transform,
-                                  num_samples=configs.num_samples, no_local=configs.no_local)
+                                  num_samples=configs.num_samples)
     if not configs.no_val:
         val_dataset = TTNet_Dataset(val_events_infor, configs.org_size, configs.input_size, transform=val_transform,
-                                    num_samples=configs.num_samples, no_local=configs.no_local)
+                                    num_samples=configs.num_samples)
     if configs.distributed:
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
         if not configs.no_val:
@@ -64,7 +64,7 @@ def create_test_dataloader(configs):
     dataset_type = 'test'
     test_events_infor, test_events_labels = get_events_infor(configs.test_game_list, configs, dataset_type)
     test_dataset = TTNet_Dataset(test_events_infor, configs.org_size, configs.input_size, transform=test_transform,
-                                 num_samples=configs.num_samples, no_local=configs.no_local)
+                                 num_samples=configs.num_samples)
 
     test_dataloader = DataLoader(test_dataset, batch_size=configs.batch_size, shuffle=False,
                                  pin_memory=configs.pin_memory, num_workers=configs.num_workers)

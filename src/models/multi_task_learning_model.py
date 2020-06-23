@@ -42,11 +42,9 @@ class Multi_Task_Learning_Model(nn.Module):
         self.event_loss_criterion = Events_Spotting_Loss(weights=weights_events, num_events=num_events)
         self.seg_loss_criterion = Segmentation_Loss()
 
-    def forward(self, original_batch_input, resize_batch_input, org_ball_pos_xy, global_ball_pos_xy, target_events,
-                target_seg):
+    def forward(self, resize_batch_input, org_ball_pos_xy, global_ball_pos_xy, target_events, target_seg):
         log_vars_idx = 0
-        pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy = self.model(original_batch_input,
-                                                                                                 resize_batch_input,
+        pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy = self.model(resize_batch_input,
                                                                                                  org_ball_pos_xy)
         # Create target for events spotting and ball position (local and global)
         batch_size = pred_ball_global.size(0)
@@ -85,7 +83,6 @@ class Multi_Task_Learning_Model(nn.Module):
 
         return pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy, total_loss, self.log_vars.data.tolist()
 
-    def run_demo(self, original_batch_input, resize_batch_input):
-        pred_ball_global, pred_ball_local, pred_events, pred_seg = self.model.run_demo(original_batch_input,
-                                                                                       resize_batch_input)
+    def run_demo(self, resize_batch_input):
+        pred_ball_global, pred_ball_local, pred_events, pred_seg = self.model.run_demo(resize_batch_input)
         return pred_ball_global, pred_ball_local, pred_events, pred_seg

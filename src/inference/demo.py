@@ -53,14 +53,13 @@ def demo(configs):
     w_ratio = w_original / w_resize
     h_ratio = h_original / h_resize
     with torch.no_grad():
-        for count, origin_imgs, resized_imgs in video_loader:
+        for count, resized_imgs in video_loader:
             # take the middle one
-            img = np.copy(origin_imgs[3 * middle_idx: 3 * (middle_idx + 1), :, :]).transpose(1, 2, 0)
+            img = cv2.resize(resized_imgs[3 * middle_idx: 3 * (middle_idx + 1)].transpose(1, 2, 0), (w_original, h_original))
             # Expand the first dim
             resized_imgs = torch.from_numpy(resized_imgs).to(configs.device, non_blocking=True).float().unsqueeze(0)
-            origin_imgs = torch.from_numpy(origin_imgs).to(configs.device, non_blocking=True).float().unsqueeze(0)
             t1 = time_synchronized()
-            pred_ball_global, pred_ball_local, pred_events, pred_seg = model.run_demo(origin_imgs, resized_imgs)
+            pred_ball_global, pred_ball_local, pred_events, pred_seg = model.run_demo(resized_imgs)
             t2 = time_synchronized()
             prediction_global, prediction_local, prediction_seg, prediction_events = post_processing(
                 pred_ball_global, pred_ball_local, pred_events, pred_seg, configs.input_size[0],
