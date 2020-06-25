@@ -170,7 +170,7 @@ cd src/inference/
 If you think this work is useful, please give me a star!
 If you find any errors or have any suggestions, please contact me. Thank you!
 
-**Email:** `nguyenmaudung03.kstn@gmail.com`
+**Email:** `nguyenmaudung93.kstn@gmail.com`
 
 ## Citation
 
