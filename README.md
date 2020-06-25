@@ -1,6 +1,9 @@
 # TTNet-Pytorch
 
-The implementation for the paper "TTNet: Real-time temporal and spatial video analysis of table tennis" <br>
+[![python-image]][python-url]
+[![pytorch-image]][pytorch-url]
+
+The implementation for the paper _**"TTNet: Real-time temporal and spatial video analysis of table tennis"**_ <br>
 An introduction of the project could be found [here (from the authors)](https://medium.com/@osai.ai/osai-empowered-russian-table-tennis-championship-with-cv-and-ai-analytics-e7d52a6d8a5c)
 
 ---
@@ -20,7 +23,8 @@ An introduction of the project could be found [here (from the authors)](https://
 - [x] Smooth labeling for event spotting
 - [x] TensorboardX
 
-- (Update 2020.06.23): Training much faster, achieve **> 120 FPS** in the inference phase.
+- **(Update 2020.06.23)**: Training much faster, achieve _**> 120 FPS**_ in the inference phase on a single 
+GPU (GTX1080Ti).
 
 ## 2. Getting Started
 ### Requirement
@@ -161,15 +165,33 @@ cd src/inference/
 ./demo.sh
 ```
 
+## Contact
+
+If you think this work is useful, please give me a star!
+If you find any errors or have any suggestions, please contact me. Thank you!
+
+**Email:** `nguyenmaudung03.kstn@gmail.com`
+
+## Citation
+
+```bash
+@article{TTNet,
+  author = {Roman Voeikov, Nikolay Falaleev, Ruslan Baikulov},
+  title = {TTNet: Real-time temporal and spatial video analysis of table tennis},
+  year = {2020},
+  conference = {CVPR 2020},
+}
+```
+
 ## Usage
 ```
 usage: main.py [-h] [--seed SEED] [--saved_fn FN] [-a ARCH] [--dropout_p P]
                [--multitask_learning] [--no_local] [--no_event] [--no_seg]
                [--pretrained_path PATH] [--overwrite_global_2_local]
-               [--no-val] [--val-size VAL_SIZE] [--smooth-labelling]
-               [--num_samples NUM_SAMPLES] [--num_workers NUM_WORKERS]
-               [--batch_size BATCH_SIZE] [--print_freq N]
-               [--checkpoint_freq N] [--sigma SIGMA]
+               [--no-val] [--no-test] [--val-size VAL_SIZE]
+               [--smooth-labelling] [--num_samples NUM_SAMPLES]
+               [--num_workers NUM_WORKERS] [--batch_size BATCH_SIZE]
+               [--print_freq N] [--checkpoint_freq N] [--sigma SIGMA]
                [--thresh_ball_pos_mask THRESH] [--start_epoch N]
                [--num_epochs N] [--lr LR] [--minimum_lr MIN_LR] [--momentum M]
                [-wd WD] [--optimizer_type OPTIMIZER] [--lr_type SCHEDULER]
@@ -203,8 +225,10 @@ optional arguments:
   --pretrained_path PATH
                         the path of the pretrained checkpoint
   --overwrite_global_2_local
-                        If true, the weights of the local stage will be overwritten by the global stage.
+                        If true, the weights of the local stage will be
+                        overwritten by the global stage.
   --no-val              If true, use all data for training, no validation set
+  --no-test             If true, dont evaluate the model on the test set
   --val-size VAL_SIZE   The size of validation set
   --smooth-labelling    If true, smoothly make the labels of event spotting
   --num_samples NUM_SAMPLES
@@ -217,9 +241,11 @@ optional arguments:
                         Parallel or Distributed Data Parallel
   --print_freq N        print frequency (default: 10)
   --checkpoint_freq N   frequency of saving checkpoints (default: 3)
-  --sigma SIGMA         standard deviation of the 1D Gaussian for the ball position target
+  --sigma SIGMA         standard deviation of the 1D Gaussian for the ball
+                        position target
   --thresh_ball_pos_mask THRESH
-                        the lower thresh for the 1D Gaussian of the ball position target
+                        the lower thresh for the 1D Gaussian of the ball
+                        position target
   --start_epoch N       the starting epoch
   --num_epochs N        number of total epochs to run
   --lr LR               initial learning rate
@@ -233,21 +259,29 @@ optional arguments:
                         ReduceonPlateau)
   --lr_factor FACTOR    reduce the learning rate with this factor
   --lr_step_size STEP_SIZE
-                        step_size of the learning rate when using steplr scheduler
-  --lr_patience N       patience of the learning rate when using ReduceoPlateau scheduler
+                        step_size of the learning rate when using steplr
+                        scheduler
+  --lr_patience N       patience of the learning rate when using
+                        ReduceoPlateau scheduler
   --earlystop_patience N
                         Early stopping the training process if performance is
                         not improved within this value
-  --freeze_global       If true, no update/train weights for the global stage of ball detection.
-  --freeze_local        If true, no update/train weights for the local stage of ball detection.
+  --freeze_global       If true, no update/train weights for the global stage
+                        of ball detection.
+  --freeze_local        If true, no update/train weights for the local stage
+                        of ball detection.
   --freeze_event        If true, no update/train weights for the event module.
-  --freeze_seg          If true, no update/train weights for the segmentation module.
+  --freeze_seg          If true, no update/train weights for the segmentation
+                        module.
   --bce_weight BCE_WEIGHT
-                        The weight of BCE loss in segmentation module, the dice_loss weight = 1- bce_weight
+                        The weight of BCE loss in segmentation module, the
+                        dice_loss weight = 1- bce_weight
   --global_weight GLOBAL_WEIGHT
-                        The weight of loss of the global stage for ball detection
+                        The weight of loss of the global stage for ball
+                        detection
   --local_weight LOCAL_WEIGHT
-                        The weight of loss of the local stage for ball detection
+                        The weight of loss of the local stage for ball
+                        detection
   --event_weight EVENT_WEIGHT
                         The weight of loss of the event spotting module
   --seg_weight SEG_WEIGHT
@@ -267,7 +301,8 @@ optional arguments:
   --evaluate            only evaluate the model, not training
   --resume_path PATH    the path of the resumed checkpoint
   --use_best_checkpoint
-                        If true, choose the best model on val set, otherwise choose the last model
+                        If true, choose the best model on val set, otherwise
+                        choose the last model
   --seg_thresh SEG_THRESH
                         threshold of the segmentation output
   --event_thresh EVENT_THRESH
@@ -276,5 +311,11 @@ optional arguments:
   --video_path PATH     the path of the video that needs to demo
   --output_format PATH  the type of the demo output
   --show_image          If true, show the image during demostration
-  --save_demo_output    If true, the image of demonstration phase will be saved
+  --save_demo_output    If true, the image of demonstration phase will be
+                        saved
 ```
+
+[python-image]: https://img.shields.io/badge/Python-3.x-ff69b4.svg
+[python-url]: https://www.python.org/
+[pytorch-image]: https://img.shields.io/badge/PyTorch-1.5-2BAF2B.svg
+[pytorch-url]: https://pytorch.org/
