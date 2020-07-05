@@ -25,7 +25,8 @@ def create_model(configs):
     """Create model based on architecture name"""
     if configs.arch == 'ttnet':
         ttnet_model = TTNet(dropout_p=configs.dropout_p, tasks=configs.tasks, input_size=configs.input_size,
-                            thresh_ball_pos_mask=configs.thresh_ball_pos_mask)
+                            thresh_ball_pos_mask=configs.thresh_ball_pos_mask,
+                            num_frames_sequence=configs.num_frames_sequence)
     else:
         assert False, 'Undefined model backbone'
 

@@ -61,12 +61,13 @@ class DeconvBlock(nn.Module):
 
 
 class BallDetection(nn.Module):
-    def __init__(self, dropout_p):
+    def __init__(self, num_frames_sequence, dropout_p):
         super(BallDetection, self).__init__()
-        self.conv1 = nn.Conv2d(27, 64, kernel_size=1, stride=1, padding=0)
+        self.conv1 = nn.Conv2d(num_frames_sequence * 3, 64, kernel_size=1, stride=1, padding=0)
         self.batchnorm = nn.BatchNorm2d(64)
         self.relu = nn.ReLU()
         self.convblock1 = ConvBlock(in_channels=64, out_channels=64)
+        self.convblock2 = ConvBlock(in_channels=64, out_channels=64)
         self.dropout2d = nn.Dropout2d(p=dropout_p)
         self.convblock3 = ConvBlock(in_channels=64, out_channels=128)
         self.convblock4 = ConvBlock(in_channels=128, out_channels=128)
@@ -80,7 +81,7 @@ class BallDetection(nn.Module):
 
     def forward(self, x):
         x = self.relu(self.batchnorm(self.conv1(x)))
-        out_block2 = self.convblock1(self.convblock1(x))
+        out_block2 = self.convblock2(self.convblock1(x))
         x = self.dropout2d(out_block2)
         out_block3 = self.convblock3(x)
         out_block4 = self.convblock4(out_block3)
@@ -160,14 +161,14 @@ class Segmentation(nn.Module):
 
 
 class TTNet(nn.Module):
-    def __init__(self, dropout_p, tasks, input_size, thresh_ball_pos_mask, mean=(0.485, 0.456, 0.406),
-                 std=(0.229, 0.224, 0.225)):
+    def __init__(self, dropout_p, tasks, input_size, thresh_ball_pos_mask, num_frames_sequence,
+                 mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
         super(TTNet, self).__init__()
         self.tasks = tasks
         self.ball_local_stage, self.events_spotting, self.segmentation = None, None, None
-        self.ball_global_stage = BallDetection(dropout_p=dropout_p)
+        self.ball_global_stage = BallDetection(num_frames_sequence=num_frames_sequence, dropout_p=dropout_p)
         if 'local' in tasks:
-            self.ball_local_stage = BallDetection(dropout_p=dropout_p)
+            self.ball_local_stage = BallDetection(num_frames_sequence=num_frames_sequence, dropout_p=dropout_p)
         if 'event' in tasks:
             self.events_spotting = EventsSpotting(dropout_p=dropout_p)
         if 'seg' in tasks:
@@ -314,7 +315,8 @@ class TTNet(nn.Module):
 
 if __name__ == '__main__':
     tasks = ['global', 'local', 'event', 'seg']
-    ttnet = TTNet(dropout_p=0.5, tasks=tasks, input_size=(320, 128), thresh_ball_pos_mask=0.01).cuda()
+    ttnet = TTNet(dropout_p=0.5, tasks=tasks, input_size=(320, 128), thresh_ball_pos_mask=0.01,
+                  num_frames_sequence=9).cuda()
     resize_batch_input = torch.rand((10, 27, 128, 320)).cuda()
     org_ball_pos_xy = torch.rand((10, 2)).cuda()
     pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy = ttnet(resize_batch_input,
