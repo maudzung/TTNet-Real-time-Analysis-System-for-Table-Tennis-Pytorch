@@ -24,7 +24,18 @@ An introduction of the project could be found [here (from the authors)](https://
 - [x] TensorboardX
 
 - **(Update 2020.06.23)**: Training much faster, achieve _**> 120 FPS**_ in the inference phase on a single 
-GPU (GTX1080Ti).
+GPU (GTX1080Ti). <br>
+
+- **(Update 2020.07.03)**: The implementation could achieve comparative results with the reported results in the TTNet paper. <br>
+
+- **(Update 2020.07.06)**: There are several limitations of the TTNet Paper. I have implemented the task with a new 
+approach and a new model (Of course, I'm using other repo). Now the new model could achieve:
+  - `>` **130FPS** inference, 
+  - **~0.96** IoU score for the segmentation task
+  - `<` **4 pixels** (in the full HD resolution *(1920x1080)*) of Root Mean Square Error (RMSE) for the ball detection task<br>
+  - **~0.97** percentage of correction events **(PCE)** and smooth PCE **(SPCE)**.
+  
+  **I will make the new repo public ASAP**
 
 ## 2. Getting Started
 ### Requirement
@@ -51,9 +62,6 @@ The instruction for the dataset preparation is [here](./prepare_dataset/README.m
 ### 2.3. How to run
 
 #### 2.3.1. Training
-```shell script
-cd src/training/
-```
 ##### 2.3.1.1. Single machine, single gpu
 
 ```shell script
@@ -110,25 +118,22 @@ python main.py --dist-url 'tcp://IP_OF_NODE2:FREEPORT' --dist-backend 'nccl' --m
 The performance of the TTNet strongly depends on the global stage for ball detection. Hence, It's necessary to train the 
 `global ball stage module` of the TTNet model first.
 
-- **1st phase**: Train the global and segmentation modules with 21 epochs
+- **1st phase**: Train the global and segmentation modules with 30 epochs
  
 ```shell script
-cd src/training/
 ./train_1st_phase.sh
 ```  
 
 - **2nd phase**: Load the trained weights to the global and the segmentation part, initialize the weight of the local stage with the weights of
-the global stage. In this phase, we train and just update weights of the local and the event modules. (21 epochs)
+the global stage. In this phase, we train and just update weights of the local and the event modules. (30 epochs)
 
 ```shell script
-cd src/training/
 ./train_2nd_phase.sh
 ```
 
-- **3rd phase**: Fine tune all modules. Train the network with only 9 epochs
+- **3rd phase**: Fine tune all modules. Train the network with only 30 epochs
 
 ```shell script
-cd src/training/
 ./train_3rd_phase.sh
 ```
 
@@ -146,13 +151,9 @@ Then open the web browser and go to: [http://localhost:6006/](http://localhost:6
 
 #### 2.3.4. Evaluation
 
-The pre-trained TTNet model can be downloaded from [here](https://drive.google.com/file/d/1rvV5ItOUh4u8mmZU_Dp5KhQU-wVozKM3/view?usp=sharing) 
-(It'll be updated)
-
-We can set the thresholds of the segmentation and event spotting modules in `test.sh` bash shell scripts.
+The thresholds of the segmentation and event spotting tasks could be set in `test.sh` bash shell scripts.
 
 ```shell script
-cd src/inference/
 ./test_3rd_phase.sh
 ```
 
@@ -161,7 +162,6 @@ cd src/inference/
 Run a demonstration with an input video:
 
 ```shell script
-cd src/inference/
 ./demo.sh
 ```
 
@@ -315,7 +315,7 @@ optional arguments:
                         saved
 ```
 
-[python-image]: https://img.shields.io/badge/Python-3.x-ff69b4.svg
+[python-image]: https://img.shields.io/badge/Python-3.6-ff69b4.svg
 [python-url]: https://www.python.org/
 [pytorch-image]: https://img.shields.io/badge/PyTorch-1.5-2BAF2B.svg
 [pytorch-url]: https://pytorch.org/
