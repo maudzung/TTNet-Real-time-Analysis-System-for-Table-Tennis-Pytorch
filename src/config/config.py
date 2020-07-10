@@ -51,6 +51,8 @@ def parse_configs():
     ####################################################################
     ##############     Dataloader and Running configs            #######
     ####################################################################
+    parser.add_argument('--working-dir', type=str, default='../../', metavar='PATH',
+                        help='the ROOT working directory')
     parser.add_argument('--no-val', action='store_true',
                         help='If true, use all data for training, no validation set')
     parser.add_argument('--no-test', action='store_true',
@@ -187,7 +189,6 @@ def parse_configs():
     ####################################################################
     ##############     Data configs            ###################
     ####################################################################
-    configs.working_dir = '../../'
     configs.dataset_dir = os.path.join(configs.working_dir, 'dataset')
     configs.train_game_list = ['game_1', 'game_2', 'game_3', 'game_4', 'game_5']
     configs.test_game_list = ['test_1', 'test_2', 'test_3', 'test_4', 'test_5', 'test_6', 'test_7']

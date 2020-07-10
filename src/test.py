@@ -11,15 +11,14 @@ import torch.multiprocessing as mp
 import torch.utils.data.distributed
 from tqdm import tqdm
 
-sys.path.append('../')
+sys.path.append('./')
 
 from data_process.ttnet_dataloader import create_test_dataloader
-from models.model_utils import create_model, load_pretrained_model
-from models.model_utils import make_data_parallel, get_num_parameters
+from models.model_utils import create_model, load_pretrained_model, make_data_parallel, get_num_parameters
 from utils.misc import AverageMeter
 from config.config import parse_configs
-from inference.post_processing import get_prediction_ball_pos, get_prediction_seg, prediction_get_events
-from inference.metrics import SPCE, PCE
+from utils.post_processing import get_prediction_ball_pos, get_prediction_seg, prediction_get_events
+from utils.metrics import SPCE, PCE
 
 
 def main():
