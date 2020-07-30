@@ -43,6 +43,15 @@ approach and a new model. Now the new model could achieve:
 pip install -U -r requirement.txt
 ```
 
+You will also need PyTurboJPEG:
+
+```shell script
+$ sudo apt-get install libturbojpeg
+...
+$ pip install PyTurboJPEG
+...
+```
+
 Other instruction for setting up virtual environments is [here](https://github.com/maudzung/virtual_environment_python3)
 
 ### 2.1. Preparing the dataset
