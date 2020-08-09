@@ -28,14 +28,13 @@ GPU (GTX1080Ti). <br>
 
 - **(Update 2020.07.03)**: The implementation could achieve comparative results with the reported results in the TTNet paper. <br>
 
-- **(Update 2020.07.06)**: There are several limitations of the TTNet Paper. I have implemented the task with a new 
-approach and a new model (Of course, I'm using other repo). Now the new model could achieve:
+- **(Update 2020.07.06)**: There are several limitations of the TTNet Paper (hints: Loss function, input size, and 2 more). I have implemented the task with a new 
+approach and a new model. Now the new model could achieve:
   - `>` **130FPS** inference, 
   - **~0.96** IoU score for the segmentation task
   - `<` **4 pixels** (in the full HD resolution *(1920x1080)*) of Root Mean Square Error (RMSE) for the ball detection task<br>
-  - **~0.97** percentage of correction events **(PCE)** and smooth PCE **(SPCE)**.
+  - **~97%** percentage of correction events **(PCE)** and smooth PCE **(SPCE)**.
   
-  **I will make the new repo public ASAP**
 
 ## 2. Getting Started
 ### Requirement
