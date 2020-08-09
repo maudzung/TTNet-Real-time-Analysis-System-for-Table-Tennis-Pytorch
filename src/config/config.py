@@ -63,19 +63,19 @@ def parse_configs():
                         help='If true, smoothly make the labels of event spotting')
     parser.add_argument('--num_samples', type=int, default=None,
                         help='Take a subset of the dataset to run and debug')
-    parser.add_argument('--num_workers', type=int, default=8,
+    parser.add_argument('--num_workers', type=int, default=4,
                         help='Number of threads for loading data')
-    parser.add_argument('--batch_size', type=int, default=32,
-                        help='mini-batch size (default: 16), this is the total'
+    parser.add_argument('--batch_size', type=int, default=8,
+                        help='mini-batch size (default: 8), this is the total'
                              'batch size of all GPUs on the current node when using'
                              'Data Parallel or Distributed Data Parallel')
-    parser.add_argument('--print_freq', type=int, default=10, metavar='N',
-                        help='print frequency (default: 10)')
-    parser.add_argument('--checkpoint_freq', type=int, default=3, metavar='N',
-                        help='frequency of saving checkpoints (default: 3)')
-    parser.add_argument('--sigma', type=float, default=0.5, metavar='SIGMA',
+    parser.add_argument('--print_freq', type=int, default=50, metavar='N',
+                        help='print frequency (default: 50)')
+    parser.add_argument('--checkpoint_freq', type=int, default=2, metavar='N',
+                        help='frequency of saving checkpoints (default: 2)')
+    parser.add_argument('--sigma', type=float, default=1., metavar='SIGMA',
                         help='standard deviation of the 1D Gaussian for the ball position target')
-    parser.add_argument('--thresh_ball_pos_mask', type=float, default=0.01, metavar='THRESH',
+    parser.add_argument('--thresh_ball_pos_mask', type=float, default=0.05, metavar='THRESH',
                         help='the lower thresh for the 1D Gaussian of the ball position target')
     ####################################################################
     ##############     Training strategy            ###################
@@ -83,7 +83,7 @@ def parse_configs():
 
     parser.add_argument('--start_epoch', type=int, default=1, metavar='N',
                         help='the starting epoch')
-    parser.add_argument('--num_epochs', type=int, default=40, metavar='N',
+    parser.add_argument('--num_epochs', type=int, default=30, metavar='N',
                         help='number of total epochs to run')
     parser.add_argument('--lr', type=float, default=1e-3, metavar='LR',
                         help='initial learning rate')
@@ -91,7 +91,7 @@ def parse_configs():
                         help='minimum learning rate during training')
     parser.add_argument('--momentum', type=float, default=0.9, metavar='M',
                         help='momentum')
-    parser.add_argument('-wd', '--weight_decay', type=float, default=1e-6, metavar='WD',
+    parser.add_argument('-wd', '--weight_decay', type=float, default=0., metavar='WD',
                         help='weight decay (default: 1e-6)')
     parser.add_argument('--optimizer_type', type=str, default='adam', metavar='OPTIMIZER',
                         help='the type of optimizer, it can be sgd or adam')
