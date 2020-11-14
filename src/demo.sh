@@ -1,7 +1,7 @@
 #!/bin/bash
 
 python demo.py \
-  --working_dir '../' \
+  --working-dir '../' \
   --saved_fn 'demo' \
   --arch 'ttnet' \
   --gpu_idx 0 \
