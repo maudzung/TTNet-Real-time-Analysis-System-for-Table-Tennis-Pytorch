@@ -1,6 +1,9 @@
 import os
 
 import wget
+# The SSL certificate of 'https://lab.osai.ai/' is not valid any more. This allows us to download the files anyway.
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
 
 
 def make_folder(folder_path):
