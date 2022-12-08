@@ -15,6 +15,10 @@ If you want to extract all images from videos, let's execute:
 ```shell script
 python extract_all_images.py
 ```
+or alternatively if you have the supported OpenCV version (3.2, 3.4 or 4.x) and Clang (part of LLVM, needed for automatic binding generation) installed in your system, you can use the executable:
+```shell script
+./ttnet_extract_images_multithread
+```
 
 As the authors mentioned in the original paper, images are extracted based on frames that has events. 
 To extract frames based on the key annotated events, let's execute:
