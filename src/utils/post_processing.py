@@ -27,7 +27,7 @@ def prediction_get_events(pred_events, event_thresh):
     if pred_events.is_cuda:
         pred_events = pred_events.cpu()
     pred_events = torch.squeeze(pred_events).numpy()
-    # prediction_events = (pred_events > event_thresh).astype(np.int)
+    # prediction_events = (pred_events > event_thresh).astype(np.int32)
     prediction_events = pred_events
     return prediction_events
 
@@ -36,6 +36,6 @@ def get_prediction_seg(pred_seg, seg_thresh):
     if pred_seg.is_cuda:
         pred_seg = pred_seg.cpu()
     pred_seg = torch.squeeze(pred_seg).numpy().transpose(1, 2, 0)
-    prediction_seg = (pred_seg > seg_thresh).astype(np.int)
+    prediction_seg = (pred_seg > seg_thresh).astype(np.int32)
 
     return prediction_seg
