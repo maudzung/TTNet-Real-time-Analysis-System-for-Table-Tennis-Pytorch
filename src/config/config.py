@@ -51,15 +51,15 @@ def parse_configs():
     ####################################################################
     ##############     Dataloader and Running configs            #######
     ####################################################################
-    parser.add_argument('--working-dir', type=str, default='../../', metavar='PATH',
+    parser.add_argument('--working-dir', type=str, default='../', metavar='PATH',
                         help='the ROOT working directory')
-    parser.add_argument('--no-val', action='store_true',
+    parser.add_argument('--no_val', action='store_true',
                         help='If true, use all data for training, no validation set')
-    parser.add_argument('--no-test', action='store_true',
+    parser.add_argument('--no_test', action='store_true',
                         help='If true, dont evaluate the model on the test set')
     parser.add_argument('--val-size', type=float, default=0.2,
                         help='The size of validation set')
-    parser.add_argument('--smooth-labelling', action='store_true',
+    parser.add_argument('--smooth_labelling', action='store_true',
                         help='If true, smoothly make the labels of event spotting')
     parser.add_argument('--num_samples', type=int, default=None,
                         help='Take a subset of the dataset to run and debug')
@@ -69,6 +69,8 @@ def parse_configs():
                         help='mini-batch size (default: 8), this is the total'
                              'batch size of all GPUs on the current node when using'
                              'Data Parallel or Distributed Data Parallel')
+    parser.add_argument('--distributed', type=bool, default=False,
+                        help="if its trained using multiple gpu")
     parser.add_argument('--print_freq', type=int, default=50, metavar='N',
                         help='print frequency (default: 50)')
     parser.add_argument('--checkpoint_freq', type=int, default=2, metavar='N',
@@ -131,19 +133,19 @@ def parse_configs():
     ####################################################################
     ##############     Distributed Data Parallel            ############
     ####################################################################
-    parser.add_argument('--world-size', default=-1, type=int, metavar='N',
+    parser.add_argument('--world_size', default=-1, type=int, metavar='N',
                         help='number of nodes for distributed training')
     parser.add_argument('--rank', default=-1, type=int, metavar='N',
                         help='node rank for distributed training')
-    parser.add_argument('--dist-url', default='tcp://127.0.0.1:29500', type=str,
+    parser.add_argument('--dist_url', default='tcp://127.0.0.1:29500', type=str,
                         help='url used to set up distributed training')
-    parser.add_argument('--dist-backend', default='nccl', type=str,
+    parser.add_argument('--dist_backend', default='nccl', type=str,
                         help='distributed backend')
     parser.add_argument('--gpu_idx', default=None, type=int,
                         help='GPU index to use.')
     parser.add_argument('--no_cuda', action='store_true',
                         help='If true, cuda is not used.')
-    parser.add_argument('--multiprocessing-distributed', action='store_true',
+    parser.add_argument('--multiprocessing_distributed', action='store_true',
                         help='Use multi-processing distributed training to launch '
                              'N processes per node, which has N GPUs. This is the '
                              'fastest way to use PyTorch for either single node or '
@@ -204,6 +206,7 @@ def parse_configs():
     configs.events_weights_loss = (configs.events_weights_loss_dict['bounce'], configs.events_weights_loss_dict['net'])
     configs.num_events = len(configs.events_weights_loss_dict)  # Just "bounce" and "net hits"
     configs.num_frames_sequence = 9
+    configs.interval_between_frames = 5
 
     configs.org_size = (1920, 1080)
     configs.input_size = (320, 128)

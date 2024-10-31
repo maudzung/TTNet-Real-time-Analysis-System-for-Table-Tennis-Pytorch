@@ -22,6 +22,40 @@ def get_prediction_ball_pos(pred_ball, w, thresh_ball_pos_prob):
 
     return (prediction_ball_x, prediction_ball_y)
 
+def get_prediction_ball_pos_right(pred_ball, thresh_ball_pos_prob):
+    # pred_ball is in shape ((b, w),(b,h))
+    # convert them into [b*(w,h)]
+    converted_pred_balls = [(pred_ball[0][i], pred_ball[1][i]) for i in range(pred_ball[0].shape[0])]
+    results = []
+    for converted_pred_ball in converted_pred_balls:
+        pred_ball_coords_x = converted_pred_ball[0].cpu()
+        pred_ball_coords_y = converted_pred_ball[1].cpu()
+        pred_ball_coords_x = pred_ball_coords_x.detach().numpy()
+        pred_ball_coords_y = pred_ball_coords_y.detach().numpy()
+        pred_ball_coords_x [pred_ball_coords_x  < thresh_ball_pos_prob] = 0.
+        pred_ball_coords_y [pred_ball_coords_y  < thresh_ball_pos_prob] = 0.
+        
+        prediction_ball_x = np.argmax(pred_ball_coords_x)
+        prediction_ball_y = np.argmax(pred_ball_coords_y)
+        results.append([prediction_ball_x, prediction_ball_y])
+
+    return results
+
+def get_prediction_ball_pos_right_test(pred_ball, thresh_ball_pos_prob):
+    # pred_ball is in shape (h,w)
+    pred_ball_coords_x = pred_ball[0].cpu()
+    pred_ball_coords_y = pred_ball[1].cpu()
+    pred_ball_coords_x = pred_ball_coords_x.detach().numpy()
+    pred_ball_coords_y = pred_ball_coords_y.detach().numpy()
+    pred_ball_coords_x [pred_ball_coords_x  < thresh_ball_pos_prob] = 0.
+    pred_ball_coords_y [pred_ball_coords_y  < thresh_ball_pos_prob] = 0.
+    
+    prediction_ball_x = np.argmax(pred_ball_coords_x)
+    prediction_ball_y = np.argmax(pred_ball_coords_y)
+
+
+    return (prediction_ball_x, prediction_ball_y)
+
 
 def prediction_get_events(pred_events, event_thresh):
     if pred_events.is_cuda:
@@ -36,6 +70,6 @@ def get_prediction_seg(pred_seg, seg_thresh):
     if pred_seg.is_cuda:
         pred_seg = pred_seg.cpu()
     pred_seg = torch.squeeze(pred_seg).numpy().transpose(1, 2, 0)
-    prediction_seg = (pred_seg > seg_thresh).astype(np.int)
+    prediction_seg = (pred_seg > seg_thresh).astype(int)
 
     return prediction_seg

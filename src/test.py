@@ -9,6 +9,7 @@ import torch
 import torch.distributed as dist
 import torch.multiprocessing as mp
 import torch.utils.data.distributed
+import math
 from tqdm import tqdm
 
 sys.path.append('./')
@@ -17,7 +18,7 @@ from data_process.ttnet_dataloader import create_test_dataloader
 from models.model_utils import create_model, load_pretrained_model, make_data_parallel, get_num_parameters
 from utils.misc import AverageMeter
 from config.config import parse_configs
-from utils.post_processing import get_prediction_ball_pos, get_prediction_seg, prediction_get_events
+from utils.post_processing import get_prediction_ball_pos, get_prediction_seg, prediction_get_events, get_prediction_ball_pos_right, get_prediction_ball_pos_right_test
 from utils.metrics import SPCE, PCE
 
 
@@ -104,19 +105,22 @@ def test(test_loader, model, configs):
 
             pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy, total_loss, _ = model(
                 resized_imgs, org_ball_pos_xy, global_ball_pos_xy, target_events, target_seg)
+            # previsouly the pred_ball_global will be in shape ((b, 320), (b, 128)) convert them to [[b*[[320],[128]]]
+            converted_pred_ball_global = [(pred_ball_global[0][i], pred_ball_global[1][i]) for i in range(pred_ball_global[0].shape[0])]
+            converted_pred_ball_local = [(pred_ball_local[0][i], pred_ball_local[1][i]) for i in range(pred_ball_local[0].shape[0])]
 
             org_ball_pos_xy = org_ball_pos_xy.numpy()
             global_ball_pos_xy = global_ball_pos_xy.numpy()
             # Transfer output to cpu
             target_seg = target_seg.cpu().numpy()
-
             for sample_idx in range(batch_size):
                 # Get target
                 sample_org_ball_pos_xy = org_ball_pos_xy[sample_idx]
                 sample_global_ball_pos_xy = global_ball_pos_xy[sample_idx]  # Target
                 # Process the global stage
-                sample_pred_ball_global = pred_ball_global[sample_idx]
-                sample_prediction_ball_global_xy = get_prediction_ball_pos(sample_pred_ball_global, w,
+                sample_pred_ball_global = converted_pred_ball_global[sample_idx]
+         
+                sample_prediction_ball_global_xy = get_prediction_ball_pos_right_test(sample_pred_ball_global,
                                                                            configs.thresh_ball_pos_mask)
 
                 # Calculate the MSE
@@ -136,14 +140,14 @@ def test(test_loader, model, configs):
                 # Process local ball stage
                 if pred_ball_local is not None:
                     # Get target
-                    local_ball_pos_xy = local_ball_pos_xy.cpu().numpy()  # Ground truth of the local stage
+                    local_ball_pos_xy = local_ball_pos_xy  # Ground truth of the local stage
                     sample_local_ball_pos_xy = local_ball_pos_xy[sample_idx]  # Target
                     # Process the local stage
-                    sample_pred_ball_local = pred_ball_local[sample_idx]
-                    sample_prediction_ball_local_xy = get_prediction_ball_pos(sample_pred_ball_local, w,
+                    sample_pred_ball_local = converted_pred_ball_local[sample_idx]
+                    sample_prediction_ball_local_xy = get_prediction_ball_pos_right_test(sample_pred_ball_local,
                                                                               configs.thresh_ball_pos_mask)
-
-                    # Calculate the MSE
+                    
+                    # Calculate the MSE only if the ball exist 
                     if (sample_local_ball_pos_xy[0] > 0) and (sample_local_ball_pos_xy[1] > 0):
                         mse = (sample_prediction_ball_local_xy[0] - sample_local_ball_pos_xy[0]) ** 2 + (
                                 sample_prediction_ball_local_xy[1] - sample_local_ball_pos_xy[1]) ** 2
@@ -176,7 +180,7 @@ def test(test_loader, model, configs):
 
                 # Process segmentation stage
                 if pred_seg is not None:
-                    sample_target_seg = target_seg[sample_idx].transpose(1, 2, 0).astype(np.int)
+                    sample_target_seg = target_seg[sample_idx].transpose(1, 2, 0).astype(int)
                     sample_prediction_seg = get_prediction_seg(pred_seg[sample_idx], configs.seg_thresh)
 
                     # Calculate the IoU
@@ -210,14 +214,14 @@ def test(test_loader, model, configs):
             if ((batch_idx + 1) % configs.print_freq) == 0:
                 print(
                     'batch_idx: {} - Average iou_seg: {:.4f}, mse_global: {:.1f}, mse_local: {:.1f}, mse_overall: {:.1f}, pce: {:.4f} spce: {:.4f}'.format(
-                        batch_idx, iou_seg.avg, mse_global.avg, mse_local.avg, mse_overall.avg, pce.avg, spce.avg))
+                        batch_idx, iou_seg.avg, math.sqrt(mse_global.avg), math.sqrt(mse_local.avg), math.sqrt(mse_overall.avg), pce.avg, spce.avg))
 
             batch_time.update(time.time() - start_time)
             start_time = time.time()
 
     print(
-        'Average iou_seg: {:.4f}, mse_global: {:.1f}, mse_local: {:.1f}, mse_overall: {:.1f}, pce: {:.4f} spce: {:.4f}'.format(
-            iou_seg.avg, mse_global.avg, mse_local.avg, mse_overall.avg, pce.avg, spce.avg))
+        'Average iou_seg: {:.4f}, rmse_global: {:.1f}, rmse_local: {:.1f}, rmse_overall: {:.1f}, pce: {:.4f} spce: {:.4f}'.format(
+            iou_seg.avg, math.sqrt(mse_global.avg), math.sqrt(mse_local.avg), math.sqrt(mse_overall.avg), pce.avg, spce.avg))
     print('Done testing')
 
 

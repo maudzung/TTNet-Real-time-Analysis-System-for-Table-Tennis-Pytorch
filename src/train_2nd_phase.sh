@@ -1,4 +1,7 @@
 #!/bin/bash
+#SBATCH --partition=gpu
+#SBATCH --gres=gpu:1
+#SBATCH --job-name=August
 
 python main.py \
   --working-dir '../' \
@@ -15,8 +18,9 @@ python main.py \
   --seg_weight 0. \
   --event_weight 2. \
   --local_weight 1. \
-  --pretrained_path ../checkpoints/ttnet_1st_phase/ttnet_1st_phase_epoch_30.pth \
+  --pretrained_path ../checkpoints/ttnet_1st_phase/ttnet_1st_phase_best.pth \
   --overwrite_global_2_local \
   --freeze_seg \
   --freeze_global \
-  --smooth-labelling
+  --smooth-labelling \
+  --thresh_ball_pos_mask 0.0001

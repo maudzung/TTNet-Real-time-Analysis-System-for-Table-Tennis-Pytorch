@@ -21,6 +21,35 @@ class Ball_Detection_Loss(nn.Module):
 
         return loss_ball_x + loss_ball_y
 
+class Ball_Detection_Loss_right(nn.Module):
+    def __init__(self, w, h, epsilon=1e-9):
+        super(Ball_Detection_Loss_right, self).__init__()
+        self.w = w
+        self.h = h
+        self.epsilon = epsilon
+
+    def forward(self, pred_ball_position, target_ball_position):
+        # currently the pred_ball_position and target_ball_position is [8*([320],[128])]
+        loss_total = 0.0  # Initialize total loss
+        batch_size = len(pred_ball_position)  # Determine the batch size
+
+        for (pred_ball, target_ball) in zip(pred_ball_position, target_ball_position):
+            x_pred = pred_ball[0]
+            y_pred = pred_ball[1]
+
+            x_target = target_ball[0]
+            y_target = target_ball[1]
+
+    
+            loss_ball_x = - torch.mean(x_target * torch.log(x_pred + self.epsilon) + (1 - x_target) * torch.log(1 - x_pred + self.epsilon))
+            loss_ball_y = - torch.mean(y_target * torch.log(y_pred + self.epsilon) + (1 - y_target) * torch.log(1 - y_pred + self.epsilon))
+      
+            # Accumulate the loss
+            loss_total += (loss_ball_x + loss_ball_y)
+
+        # Return the average loss over the batch
+        return loss_total / batch_size
+
 
 class Events_Spotting_Loss(nn.Module):
     def __init__(self, weights=(1, 3), num_events=2, epsilon=1e-9):

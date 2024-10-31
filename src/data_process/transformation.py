@@ -159,3 +159,75 @@ class Random_HFlip(object):
             ball_position_xy[0] = w - ball_position_xy[0]
 
         return imgs, ball_position_xy, seg_img
+
+
+import random
+import numpy as np
+import cv2
+
+class Random_Ball_Mask:
+    def __init__(self, mask_size=(20, 20), p=0.5, mask_type='mean'):
+        """
+        Args:
+            mask_size (tuple): Height and width of the mask area (blackout area).
+            p (float): Probability of applying the mask.
+            mask_type (str): Type of mask ('zero', 'noise', 'mean').
+        """
+        self.mask_size = mask_size
+        self.p = p
+        self.mask_type = mask_type
+
+    def __call__(self, imgs, ball_position_xy, seg_img):
+        """
+        Args:
+            imgs : Numpy array of shape [H, W, num_frames].
+            ball_position_xy (numpy): (x, y) ball position for the labeled frame.
+            seg_img: Corresponding segmentation mask.
+
+        Returns:
+            Tuple containing:
+                - masked_imgs: Numpy array with masked frames.
+                - ball_position_xy: Updated ball position.
+                - seg_img: Unmodified segmentation image.
+        """
+        H, W, num_frames = imgs.shape  # Extract shape from stacked array
+
+        # Ensure the mask size is valid
+        mask_h = random.randint(max(1, self.mask_size[0] - 10), self.mask_size[0] + 10)
+        mask_w = random.randint(max(1, self.mask_size[1] - 10), self.mask_size[1] + 10)
+
+        # Iterate over all frames and apply masking with some probability
+        for i in range(num_frames):
+            if random.random() <= self.p:
+                if i == num_frames - 1:
+                    # Use the given ball position for the last frame
+                    x, y = int(ball_position_xy[0]), int(ball_position_xy[1])
+                else:
+                    # Apply mask at a random position for non-labeled frames
+                    x = random.randint(0, W - mask_w)
+                    y = random.randint(0, H - mask_h)
+
+                # Ensure the mask is within the image boundaries
+                top = max(0, min(H - mask_h, y - mask_h // 2))
+                left = max(0, min(W - mask_w, x - mask_w // 2))
+
+                # Check if the selected region has valid pixels
+                region = imgs[top:top + mask_h, left:left + mask_w, i]
+                if region.size == 0:
+                    print(f"Warning: Empty slice for frame {i}. Skipping mask.")
+                    continue
+
+                # Apply the chosen mask type
+                if self.mask_type == 'zero':
+                    imgs[top:top + mask_h, left:left + mask_w, i] = 0
+
+                elif self.mask_type == 'noise':
+                    noise = np.random.randn(mask_h, mask_w) * 255  # Generate noise
+                    imgs[top:top + mask_h, left:left + mask_w, i] = noise.clip(0, 255)
+
+                elif self.mask_type == 'mean':
+                    mean_value = np.nanmean(region)  # Handle empty slices safely
+                    noise = np.random.randn(mask_h, mask_w) * 10  # Small noise
+                    imgs[top:top + mask_h, left:left + mask_w, i] = (mean_value + noise).clip(0, 255)
+
+        return imgs, ball_position_xy, seg_img

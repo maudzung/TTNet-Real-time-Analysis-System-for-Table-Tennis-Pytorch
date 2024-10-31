@@ -16,6 +16,7 @@ from collections import deque
 import cv2
 import numpy as np
 import torch
+import time
 
 sys.path.append('./')
 
@@ -79,8 +80,10 @@ def demo(configs):
 
                 ploted_img = cv2.cvtColor(ploted_img, cv2.COLOR_RGB2BGR)
                 if configs.show_image:
-                    cv2.imshow('ploted_img', ploted_img)
-                    cv2.waitKey(10)
+                    # cv2.imshow('ploted_img', ploted_img)
+                    cv2.imwrite('ploted_img.png', ploted_img)
+                    # cv2.waitKey(10)
+                    time.sleep(0.01)
                 if configs.save_demo_output:
                     cv2.imwrite(os.path.join(configs.frame_dir, '{:06d}.jpg'.format(frame_idx)), ploted_img)
 

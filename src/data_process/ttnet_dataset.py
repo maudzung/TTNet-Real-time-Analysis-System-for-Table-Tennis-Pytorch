@@ -75,13 +75,60 @@ class TTNet_Dataset(Dataset):
 
         # Transpose (H, W, C) to (C, H, W) --> fit input of Pytorch model
         resized_imgs = resized_imgs.transpose(2, 0, 1)
-        target_seg = seg_img.transpose(2, 0, 1).astype(np.float)
+        target_seg = seg_img.transpose(2, 0, 1).astype(float)
         # Segmentation mask should be 0 or 1
         target_seg[target_seg < 75] = 0.
         target_seg[target_seg >= 75] = 1.
 
-        return resized_imgs, org_ball_pos_xy.astype(np.int), global_ball_pos_xy.astype(np.int), \
+        return resized_imgs, org_ball_pos_xy.astype(int), global_ball_pos_xy.astype(int), \
                target_events, target_seg
+
+
+class Occlusion_Dataset(Dataset):
+    def __init__(self, events_infor, events_label, transform=None, num_samples=None):
+        self.events_infor = events_infor
+        self.events_label = events_label
+        self.transform = transform
+
+        if num_samples is not None:
+            self.events_infor = self.events_infor[:num_samples]
+
+    def __len__(self):
+        return len(self.events_infor)
+
+    def __getitem__(self, index):
+        img_path_list = self.events_infor[index]
+        ball_xy = self.events_label[index]
+        imgs = []
+        for img_path in img_path_list:
+            img = cv2.imread(img_path)
+
+            if img is None:
+                raise ValueError(f"Image not found or can't be read at path: {img_path}")
+            imgs.append(img)
+        # Apply augmentation
+        if self.transform:
+            imgs, ball_xy= self.transform(imgs, ball_xy)
+        
+        converted_imgs = []
+        for img in imgs:    
+            # after transform all images will be in shape (H, W, C)
+            img = np.transpose(img, (2, 0, 1))  # Now img is (C, H, W)
+            converted_imgs.append(img)
+        # stack them to form the shape (1,num_frames, C, H, W)
+        # numpy_imgs = np.stack(converted_imgs, axis=0)  # Stack along the new axis (N)
+        # convert them into pairs formation
+        # add a padded frame so the number is equal and can be processed with, only when the images is in odd length
+        image_list=[]
+
+        masked_frameid = len(converted_imgs)//2 
+        i = 0
+        while i < len(converted_imgs):
+            image_list.append(np.array(converted_imgs[i]))
+            i+=1
+        
+        image_list_np = np.array(image_list)
+        return image_list_np, (masked_frameid, np.array(ball_xy.astype(int)))
 
 
 if __name__ == '__main__':

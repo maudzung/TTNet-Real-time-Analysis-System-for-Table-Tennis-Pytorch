@@ -1,9 +1,11 @@
 #!/bin/bash
+#SBATCH --partition=gpu
+#SBATCH --gres=gpu:1
+#SBATCH --job-name=August
 
 python main.py \
   --working-dir '../' \
   --saved_fn 'ttnet_1st_phase' \
-  --no-val \
   --batch_size 8 \
   --num_workers 4 \
   --lr 0.001 \

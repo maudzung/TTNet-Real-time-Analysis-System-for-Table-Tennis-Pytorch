@@ -16,28 +16,38 @@ def extract_images_from_videos(video_path, out_images_dir):
     make_folder(sub_images_dir)
 
     video_cap = cv2.VideoCapture(video_path)
-    n_frames = video_cap.get(cv2.CAP_PROP_FRAME_COUNT)
-    f_width = video_cap.get(cv2.CAP_PROP_FRAME_WIDTH)
-    f_height = video_cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-    print('video_fn: {}.mp4, number of frames: {}, f_width: {}, f_height: {}'.format(video_fn, n_frames, f_width,
-                                                                                     f_height))
+    if not video_cap.isOpened():
+        print(f"Error: Cannot open video file {video_path}")
+        return
 
-    frame_cnt = -1
-    while True:
+    n_frames = int(video_cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    f_width = int(video_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    f_height = int(video_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    print(f'Processing video: {video_fn}.mp4')
+    print(f'Number of frames: {n_frames}, Width: {f_width}, Height: {f_height}')
+
+    frame_idx = 0
+    while frame_idx < n_frames:
         ret, img = video_cap.read()
-        if ret:
-            frame_cnt += 1
-            image_path = os.path.join(sub_images_dir, 'img_{:06d}.jpg'.format(frame_cnt))
-            if os.path.isfile(image_path):
-                print('video {} had been already extracted'.format(video_path))
-                break
-            cv2.imwrite(image_path, img)
+        if not ret:
+            print(f"Warning: Failed to read frame {frame_idx} from video {video_path}")
+            break
+
+        image_path = os.path.join(sub_images_dir, f'img_{frame_idx:06d}.jpg')
+        if os.path.isfile(image_path):
+            # Image already exists, skip writing but continue extracting
+            print(f"Frame {frame_idx} already exists. Skipping...")
         else:
-            break
-        if cv2.waitKey(10) & 0xFF == ord('q'):
-            break
+            success = cv2.imwrite(image_path, img)
+            if not success:
+                print(f"Error: Failed to write frame {frame_idx} to {image_path}")
+                # Optionally, you can choose to break or continue based on your needs
+                # break
+
+        frame_idx += 1
+
     video_cap.release()
-    print('done extraction: {}'.format(video_path))
+    print(f'Done extracting frames from: {video_path}')
 
 
 if __name__ == '__main__':

@@ -13,6 +13,7 @@ An introduction of the project could be found [here (from the authors)](https://
 ![demo](./docs/demo.gif)
 
 ## 1. Features
+
 - [x] Ball detection global stage
 - [x] Ball detection local stage (refinement)
 - [x] Events Spotting detection (Bounce and Net hit)
@@ -23,20 +24,12 @@ An introduction of the project could be found [here (from the authors)](https://
 - [x] Smooth labeling for event spotting
 - [x] TensorboardX
 
-- **(Update 2020.06.23)**: Training much faster, achieve _**> 120 FPS**_ in the inference phase on a single 
-GPU (GTX1080Ti). <br>
+- **(Update 2024.09.12)**: The implementation could achieve comparative results with the reported results in the TTNet paper. Moreover, I have fixed the wrong implementation in the ball detection module, changed it to the original implementation just like in the paper! I have also provided completely training code in train.sh<br>
 
-- **(Update 2020.07.03)**: The implementation could achieve comparative results with the reported results in the TTNet paper. <br>
-
-- **(Update 2020.07.06)**: There are several limitations of the TTNet Paper (hints: Loss function, input size, and 2 more). I have implemented the task with a new 
-approach and a new model. Now the new model could achieve:
-  - `>` **130FPS** inference, 
-  - **~0.96** IoU score for the segmentation task
-  - `<` **4 pixels** (in the full HD resolution *(1920x1080)*) of Root Mean Square Error (RMSE) for the ball detection task<br>
-  - **~97%** percentage of correction events **(PCE)** and smooth PCE **(SPCE)**.
+- **(2024.09.12)**: The model can achieve **0.9632** on average iou, rmse global **8.9**, rmse local **2.3** rmse_overall: **54.4**, pce: **0.8918** spce: **0.9808**
   
-
 ## 2. Getting Started
+
 ### Requirement
 
 ```shell script
@@ -55,6 +48,7 @@ $ pip install PyTurboJPEG
 Other instruction for setting up virtual environments is [here](https://github.com/maudzung/virtual_environment_python3)
 
 ### 2.1. Preparing the dataset
+
 The instruction for the dataset preparation is [here](./prepare_dataset/README.md)
 
 ### 2.2. Model & Input tensors
@@ -70,13 +64,14 @@ The instruction for the dataset preparation is [here](./prepare_dataset/README.m
 ### 2.3. How to run
 
 #### 2.3.1. Training
+
 ##### 2.3.1.1. Single machine, single gpu
 
 ```shell script
 python main.py --gpu_idx 0
 ```
 
-By default (as the above command), there are 4 modules in the TTNet model: *global stage, local stage, event spotting, segmentation*.
+By default (as the above command), there are 4 modules in the TTNet model: _global stage, local stage, event spotting, segmentation_.
 You can disable one of the modules, except the global stage module.<br>
 An important note is if you disable the local stage module, the event spotting module will be also disabled.
 
@@ -99,7 +94,8 @@ python main.py --gpu_idx 0 --no_local --no_seg --no_event
 ```
 
 ##### 2.3.1.2. Multi-processing Distributed Data Parallel Training
-We should always use the `nccl` backend for multi-processing distributed training since it currently provides the best 
+
+We should always use the `nccl` backend for multi-processing distributed training since it currently provides the best
 distributed training performance.
 
 - **Single machine (node), multiple GPUs**
@@ -115,6 +111,7 @@ _**First machine**_
 ```shell script
 python main.py --dist-url 'tcp://IP_OF_NODE1:FREEPORT' --dist-backend 'nccl' --multiprocessing-distributed --world-size 2 --rank 0
 ```
+
 _**Second machine**_
 
 ```shell script
@@ -123,11 +120,11 @@ python main.py --dist-url 'tcp://IP_OF_NODE2:FREEPORT' --dist-backend 'nccl' --m
 
 #### 2.3.2. Training stratergy
 
-The performance of the TTNet strongly depends on the global stage for ball detection. Hence, It's necessary to train the 
+The performance of the TTNet strongly depends on the global stage for ball detection. Hence, It's necessary to train the
 `global ball stage module` of the TTNet model first.
 
 - **1st phase**: Train the global and segmentation modules with 30 epochs
- 
+
 ```shell script
 ./train_1st_phase.sh
 ```  
@@ -145,17 +142,17 @@ the global stage. In this phase, we train and just update weights of the local a
 ./train_3rd_phase.sh
 ```
 
-  
 #### 2.3.3. Visualizing training progress
+
 The Tensorboard was used to save loss values on the training set and the validation set.
 Execute the below command on the working terminal:
+
 ```
     cd logs/<task directory>/tensorboard/
     tensorboard --logdir=./
 ```
 
 Then open the web browser and go to: [http://localhost:6006/](http://localhost:6006/)
-
 
 #### 2.3.4. Evaluation
 
@@ -165,7 +162,7 @@ The thresholds of the segmentation and event spotting tasks could be set in `tes
 ./test_3rd_phase.sh
 ```
 
-#### 2.3.5. Demo:
+#### 2.3.5. Demo
 
 Run a demonstration with an input video:
 
@@ -192,6 +189,7 @@ If you find any errors or have any suggestions, please contact me. Thank you!
 ```
 
 ## Usage
+
 ```
 usage: main.py [-h] [--seed SEED] [--saved_fn FN] [-a ARCH] [--dropout_p P]
                [--multitask_learning] [--no_local] [--no_event] [--no_seg]
@@ -323,7 +321,7 @@ optional arguments:
                         saved
 ```
 
-[python-image]: https://img.shields.io/badge/Python-3.6-ff69b4.svg
+[python-image]: https://img.shields.io/badge/Python-3.9-ff69b4.svg
 [python-url]: https://www.python.org/
-[pytorch-image]: https://img.shields.io/badge/PyTorch-1.5-2BAF2B.svg
+[pytorch-image]: https://img.shields.io/badge/PyTorch-2.4-2BAF2B.svg
 [pytorch-url]: https://pytorch.org/

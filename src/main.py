@@ -14,18 +14,24 @@ from tqdm import tqdm
 
 sys.path.append('./')
 
-from data_process.ttnet_dataloader import create_train_val_dataloader, create_test_dataloader
+from data_process.ttnet_dataloader import create_train_val_dataloader, create_test_dataloader, create_occlusion_train_val_dataloader
 from models.model_utils import create_model, load_pretrained_model, make_data_parallel, resume_model, get_num_parameters
 from models.model_utils import freeze_model
 from utils.train_utils import create_optimizer, create_lr_scheduler, get_saved_state, save_checkpoint
 from utils.train_utils import reduce_tensor, to_python_float
 from utils.misc import AverageMeter, ProgressMeter
 from utils.logger import Logger
+from utils.post_processing import get_prediction_ball_pos_right
 from config.config import parse_configs
 
 
 def main():
     configs = parse_configs()
+
+    if torch.cuda.is_available():
+        print(f"Number of GPUs: {torch.cuda.device_count()}")
+        for i in range(torch.cuda.device_count()):
+            print(f"GPU {i}: {torch.cuda.get_device_name(i)}")
 
     # Re-produce results
     if configs.seed is not None:
@@ -123,6 +129,7 @@ def main_worker(gpu_idx, configs):
         logger.info(">>> Loading dataset & getting dataloader...")
     # Create dataloader
     train_loader, val_loader, train_sampler = create_train_val_dataloader(configs)
+
     test_loader = create_test_dataloader(configs)
     if logger is not None:
         logger.info('number of batches in train set: {}'.format(len(train_loader)))
@@ -197,6 +204,7 @@ def cleanup():
 
 
 def train_one_epoch(train_loader, model, optimizer, epoch, configs, logger):
+    configs = parse_configs()
     batch_time = AverageMeter('Time', ':6.3f')
     data_time = AverageMeter('Data', ':6.3f')
     losses = AverageMeter('Loss', ':.4e')
@@ -209,12 +217,14 @@ def train_one_epoch(train_loader, model, optimizer, epoch, configs, logger):
     start_time = time.time()
     for batch_idx, (resized_imgs, org_ball_pos_xy, global_ball_pos_xy, target_events, target_seg) in enumerate(
             tqdm(train_loader)):
+
         data_time.update(time.time() - start_time)
         batch_size = resized_imgs.size(0)
         target_seg = target_seg.to(configs.device, non_blocking=True)
         resized_imgs = resized_imgs.to(configs.device, non_blocking=True).float()
         pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy, total_loss, _ = model(
             resized_imgs, org_ball_pos_xy, global_ball_pos_xy, target_events, target_seg)
+      
         # For torch.nn.DataParallel case
         if (not configs.distributed) and (configs.gpu_idx is None):
             total_loss = torch.mean(total_loss)
@@ -263,7 +273,6 @@ def evaluate_one_epoch(val_loader, model, epoch, configs, logger):
             resized_imgs = resized_imgs.to(configs.device, non_blocking=True).float()
             pred_ball_global, pred_ball_local, pred_events, pred_seg, local_ball_pos_xy, total_loss, _ = model(
                 resized_imgs, org_ball_pos_xy, global_ball_pos_xy, target_events, target_seg)
-
             # For torch.nn.DataParallel case
             if (not configs.distributed) and (configs.gpu_idx is None):
                 total_loss = torch.mean(total_loss)
